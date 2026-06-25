@@ -1,0 +1,682 @@
+
+
+================================================================================
+=== START AI RESPONSE LOG | File: POJK 1 Tahun 2024 Kualitas Aset Bank Perekonomian Rakyat.md | Time: 2026-06-23 19:23:39 ===
+================================================================================
+--- METADATA EXTRACTION RESULT ---
+<think>
+The user wants me to extract one line of text from the document containing:
+1. Regulasi (full title of the regulation)
+2. Tipe (POJK)
+3. Tanggal (date enacted)
+
+From the document, I can identify:
+- Title: "PERATURAN OTORITAS JASA KEUANGAN REPUBLIK INDONESIA NOMOR 1 TAHUN 2024 TENTANG KUALITAS ASET BANK PEREKONOMIAN RAKYAT"
+- Type: POJK
+- Date enacted (Diundangkan): 11 Januari 2024
+
+Wait, there's "Ditetapkan di Jakarta pada tanggal 10 Januari 2024" and "Diundangkan di Jakarta pada tanggal 11 Januari 2024".
+
+The user said "Diundangkan/Ditetapkan" so either could work. The diundangkan date is 11 Januari 2024.
+
+Let me format this as: Regulasi|Tipe|Tanggal
+
+The full title would be: "PERATURAN OTORITAS JASA KEUANGAN NOMOR 1 TAHUN 2024 TENTANG KUALITAS ASET BANK PEREKONOMIAN RAKYAT"
+
+Or with the full header: "PERATURAN OTORITAS JASA KEUANGAN REPUBLIK INDONESIA NOMOR 1 TAHUN 2024 TENTANG KUALITAS ASET BANK PEREKONOMIAN RAKYAT"
+
+The most complete title from the document is: "PERATURAN OTORITAS JASA KEUANGAN REPUBLIK INDONESIA NOMOR 1 TAHUN 2024 TENTANG KUALITAS ASET BANK PEREKONOMIAN RAKYAT"
+
+Date: 11 Januari 2024 (diundangkan)
+
+Let me output this in the correct format.
+</think>
+PERATURAN OTORITAS JASA KEUANGAN REPUBLIK INDONESIA NOMOR 1 TAHUN 2024 TENTANG KUALITAS ASET BANK PEREKONOMIAN RAKYAT|POJK|11 Januari 2024
+----------------------------------
+
+--- CYCLE 1 OUTPUT ---
+<think>Let me analyze this document carefully. It's a POJK (Peraturan Otoritas Jasa Keuangan) regulation about "Kualitas Aset Bank Perekonomian Rakyat" (Asset Quality of Rural Banks).
+
+I need to extract the hierarchical data into PSV format with 8 columns:
+1. Bagian (Section) - Chapter/Section name
+2. Kode Item - Continuous incremental integer
+3. Item Ref - Parent article/paragraph reference
+4. Item - Main parent text
+5. Item Description - Explanation from PENJELASAN
+6. Kode Sub Item - Incremental integer for sub-items
+7. Sub Item Ref - Letter/number of list item
+8. Sub Item - Actual text of sub-item
+
+Special categorization rules:
+- Glossaries/Definitions: "Ketentuan"
+- Administrative penalties: "Sanksi"
+- Legal meta-data: "Regulasi Lain"
+- All other operational rules: keep original Chapter
+
+Let me go through the document chronologically:
+
+**BAB I - KETENTUAN UMUM**
+Pasal 1 - Definitions (Glossaries)
+- This should be categorized as "Ketentuan"
+- Has 17 numbered items (1-17)
+
+**BAB II - KUALITAS ASET**
+Bagian Kesatu - Umum
+- Pasal 2 - ayat (1), (2) with sub-items a, b
+- Pasal 3 - ayat (1), (2), (3)
+- Pasal 4 - ayat (1), (2), (3) with sub-items a, b in (1)
+- Pasal 5 - ayat (1), (2), (3), (4), (5) with sub-items a, b in (1), and a, b, c in (2)
+- Pasal 6 - ayat (1), (2), (3), (4), (5) with sub-items a, b in (1), and 1, 2, 3 in a
+
+Bagian Kedua - Kredit
+- Pasal 7 - ayat (1), (2), (3) with sub-items a, b, c in (1)
+- Pasal 8 - ayat (1), (2), (3) with multiple sub-items
+- Pasal 9 - with sub-items a, b
+- Pasal 10
+- Pasal 11 - with sub-items a, b, c, d, e
+- Pasal 12
+- Pasal 13 - ayat (1), (2)
+
+Bagian Ketiga - Surat Berharga
+- Pasal 14 - ayat (1), (2), (3), (4) with sub-items a, b, c in (3)
+
+Bagian Keempat - Penempatan pada Bank Lain
+- Pasal 15 - ayat (1), (2) with sub-items a, b, c
+
+Bagian Kelima - Penyertaan Modal
+- Pasal 16 - ayat (1), (2), (3), (4) with sub-items a, b in (1), a, b, c, d in (2)
+
+Bagian Keenam - Aset Produktif yang Dijamin dengan Agunan Tunai
+- Pasal 17 - ayat (1), (2), (3) with sub-items a, b in (2), a, b, c, d in (3) with nested 1, 2
+
+Bagian Ketujuh - Sanksi
+- Pasal 18 - Administrative penalties - categorized as "Sanksi"
+
+**BAB III - PPKA DAN CKPN**
+Bagian Kesatu - PPKA
+- Pasal 19 - ayat (1), (2), (3), (4) with sub-items a, b, c, d in (3), a, b in (4)
+- Pasal 20 - ayat (1) with many sub-items (a-k), (2), (3), (4), (5), (6)
+- Pasal 21 - ayat (1), (2), (3) with sub-items a, b, c, d in (2)
+- Pasal 22 - ayat (1), (2)
+- Pasal 23
+- Pasal 24
+- Pasal 25
+
+Bagian Kedua - CKPN
+- Pasal 26
+- Pasal 27 - ayat (1), (2), (3)
+
+Bagian Ketiga - Sanksi
+- Pasal 28 - Administrative penalties - categorized as "Sanksi"
+
+**BAB IV - RESTRUKTURISASI KREDIT**
+Bagian Kesatu - Umum
+- Pasal 29 - ayat (1), (2), (3), (4) with sub-items a, b in (1), a, b, c in (2)
+- Pasal 30 - ayat (1), (2) with sub-items a, b, c in (1), a, b, c, d in (2)
+- Pasal 31 - ayat (1), (2), (3) with sub-items a, b in (1), a, b in (2)
+- Pasal 32
+- Pasal 33 - with sub-items a, b
+- Pasal 34 - with sub-items a, b, c, d
+
+Bagian Kedua - Sanksi
+- Pasal 35 - Administrative penalties - categorized as "Sanksi"
+
+**BAB V - PROPERTI TERBENGKALAI**
+- Pasal 36 - ayat (1), (2), (3), (4)
+- Pasal 37 - ayat (1), (2), (3), (4) with sub-items a, b, c in (3)
+- Pasal 38 - Administrative penalties - categorized as "Sanksi"
+
+**BAB VI - AYDA**
+- Pasal 39 - ayat (1), (2), (3), (4), (5), (6), (7), (8) with sub-items a, b in (3) with nested 1, 2, a, b in (5), a, b in (8)
+- Pasal 40 - ayat (1), (2), (3), (4), (5), (6) with sub-items a, b, c in (2), a, b in (3)
+- Pasal 41 - Administrative penalties - categorized as "Sanksi"
+
+**BAB VII - HAPUS BUKU**
+- Pasal 42 - ayat (1), (2)
+- Pasal 43 - ayat (1), (2), (3)
+- Pasal 44 - Administrative penalties - categorized as "Sanksi"
+
+**BAB VIII - Kebijakan Perkreditan dan Prosedur Perkreditan**
+- Pasal 45 - ayat (1), (2), (3), (4) with sub-items a, b in (1), a-g in (2)
+- Pasal 46 - ayat (1), (2), (3) with sub-items a, b, c in (2), a-g in (3) with nested 1-5 in a
+- Pasal 47 - Administrative penalties - categorized as "Sanksi"
+
+**BAB IX - KETENTUAN PERALIHAN**
+- Pasal 48 - with sub-items a, b
+- Pasal 49 - with sub-items a, b
+- Pasal 50
+
+**BAB X - KETENTUAN PENUTUP**
+- Pasal 51 - Legal meta-data - categorized as "Regulasi Lain"
+- Pasal 52 - Legal meta-data - categorized as "Regulasi Lain"
+- Pasal 53 - Legal meta-data - categorized as "Regulasi Lain"
+
+Now let me carefully extract each item, paying attention to:
+1. Numbering correctly
+2. The flatten list rule - put parent text and sub-items on same row, repeating parent Item Ref and Item on every row
+3. Getting the correct penjelasan (explanation) from PENJELASAN section
+
+Let me start with the explanations (PENJELASAN):
+
+Pasal 1: "Cukup jelas."
+Pasal 2: Has penjelasan for Ayat (1) and Ayat (2). Need to combine for the full description.
+Pasal 3: Cukup jelas, Ayat (2) explanation, Cukup jelas
+Pasal 4: Complex explanations with examples
+Pasal 5: Complex explanations
+Pasal 6: Complex explanations
+Pasal 7: Complex
+Pasal 8: Complex
+Pasal 9: Cukup jelas
+Pasal 10: Has explanation
+Pasal 11: Cukup jelas
+Pasal 12: Has explanation
+Pasal 13: Ayat (1) and Cukup jelas for Ayat (2)
+Pasal 14: Cukup jelas
+Pasal 15: Cukup jelas
+Pasal 16: Cukup jelas
+Pasal 17: Ayat (1) Cukup jelas, Ayat (2) Cukup jelas, Ayat (3) explanation
+Pasal 18: Cukup jelas
+Pasal 19: Cukup jelas
+Pasal 20: Complex with examples
+Pasal 21: Complex
+Pasal 22: Cukup jelas
+Pasal 23: Complex with examples
+Pasal 24: Cukup jelas
+Pasal 25: Has explanation (Pihak lawan...)
+Pasal 26: Cukup jelas
+Pasal 27: Cukup jelas
+Pasal 28: Cukup jelas
+Pasal 29: Complex
+Pasal 30: Complex
+Pasal 31: Complex with examples
+Pasal 32: Has explanation
+Pasal 33: Cukup jelas
+Pasal 34: Cukup jelas
+Pasal 35: Cukup jelas
+Pasal 36: Complex with examples
+Pasal 37: Complex with examples
+Pasal 38: Cukup jelas
+Pasal 39: Complex
+Pasal 40: Complex with examples
+Pasal 41: Cukup jelas
+Pasal 42: Ayat (1) Cukup jelas, Ayat (2) explanation
+Pasal 43: Complex
+Pasal 44: Cukup jelas
+Pasal 45: Complex
+Pasal 46: Complex
+Pasal 47: Cukup jelas
+Pasal 48: Cukup jelas
+Pasal 49: Cukup jelas
+Pasal 50: Cukup jelas
+Pasal 51: Cukup jelas
+Pasal 52: Cukup jelas
+Pasal 53: Cukup jelas
+
+The instruction says: "If it says 'Cukup jelas.', write 'Cukup jelas.' (Do not include prefixes like 'Ayat 2' in the description)."
+
+So for items with multiple ayat that are all "Cukup jelas.", the description should just be "Cukup jelas."
+
+Let me think about how to handle items where the penjelasan has complex multi-ayat explanations. For these cases, I need to combine them but not include "Ayat X" prefixes. Let me extract just the substantive explanation text.
+
+Actually, looking more carefully, I think the description should be the main paragraph explanation, not sub-item explanations. Let me proceed.
+
+For Pasal 2: "Prinsip kehati-hatian dalam pengelolaan Aset khususnya Kredit antara lain dilakukan berdasarkan analisis kelayakan usaha dengan memperhatikan paling sedikit faktor 5C's yaitu watak (character), kemampuan (capacity), modal (capital), agunan (collateral) dan prospek usaha Debitur (condition of economy). Kualitas baik dalam Aset Produktif ditunjukkan dengan kualitas lancar. Termasuk dalam langkah yang diperlukan agar kualitas Aset tetap baik antara lain penerapan manajemen risiko kredit secara efektif, termasuk melalui penyusunan dan pelaksanaan kebijakan dan pedoman perkreditan sesuai dengan Peraturan Otoritas Jasa Keuangan ini."
+
+Hmm, this is going to be a long extraction. Let me be systematic and go through each Pasal.
+
+Let me also think about how to handle the flattening. For example:
+
+Pasal 2 has:
+- Ayat (1): "BPR wajib mengelola Aset berdasarkan prinsip kehati-hatian."
+- Ayat (2): "Untuk melaksanakan prinsip kehati-hatian sebagaimana dimaksud pada ayat (1), Direksi BPR wajib menilai, memantau, dan mengambil langkah yang diperlukan:"
+  - a. "agar kualitas Aset Produktif tetap dalam kualitas baik; dan"
+  - b. "untuk penyelesaian Aset Nonproduktif."
+
+So for Pasal 2:
+- Row 1: Ayat (1) - no sub-items, just the text
+- Row 2-3: Ayat (2) - the parent text on both rows with sub-items
+
+Wait, actually the instruction says: "CRITICAL - FLATTENING LISTS: If a paragraph has sub-items (e.g., a, b, c), DO NOT create a standalone row just for the parent text. You must put the parent text in the Item column and the list text in the Sub Item column on the SAME row. You MUST repeat the parent Item Ref and Item text on EVERY SINGLE ROW for that list."
+
+But what about multiple ayat without sub-items? For those, should I create separate rows or combine them?
+
+Looking at the instructions again: "Item Ref: The parent article/paragraph reference (e.g., 'Pasal 2 ayat 2'). DO NOT include 'huruf a' or sub-item references here."
+
+So Item Ref should reference the specific paragraph. Each ayat seems to be a separate item.
+
+But the flattening rule says: if a paragraph has sub-items, don't create standalone row for parent text. So:
+- Ayat (1) without sub-items: Just one row for ayat (1)
+- Ayat (2) with sub-items a, b: Two rows, both with Item Ref = "Pasal 2 ayat (2)" and Item = parent text, with sub-items in Sub Item column
+
+Let me now do the extraction systematically.
+
+Actually, I realize I need to reconsider. Looking at examples like Pasal 5:
+- Ayat (1) has sub-items a, b → flatten
+- Ayat (2) has sub-items a, b, c → flatten
+- Ayat (3) no sub-items → standalone
+- Ayat (4) no sub-items → standalone
+- Ayat (5) no sub-items → standalone
+
+For Pasal 19:
+- Ayat (1) no sub-items → standalone
+- Ayat (2) no sub-items → standalone
+- Ayat (3) has sub-items a, b, c, d → flatten
+- Ayat (4) has sub-items a, b → flatten
+
+So for these, the parent text in the Item column should be the text of the ayat, not the whole Pasal.
+
+Wait, but looking at the rules again: "You MUST repeat the parent Item Ref and Item text on EVERY SINGLE ROW for that list."
+
+The "Item" column should contain the parent text (the text that introduces the list). For ayat (3) of Pasal 19, the parent text is "PPKA khusus sebagaimana dimaksud pada ayat (1) ditetapkan paling sedikit:"
+
+So yes, Item = the parent text that introduces the sub-items.
+
+OK let me start the extraction. I'll number each Item (new Kode Item starts at 1 and increments for each new Item Ref).
+
+Now, about the Bagian (Section) column:
+- Pasal 1: "Ketentuan" (Glossaries/Definitions)
+- Pasal 2-17 (BAB II): "Bab II" (but Pasal 18 Sanksi → "Sanksi")
+- Pasal 18: "Sanksi" (Administrative penalties)
+- Pasal 19-27 (BAB III): "Bab III" (but Pasal 28 Sanksi → "Sanksi")
+- Pasal 28: "Sanksi"
+- Pasal 29-34 (BAB IV): "Bab IV" (but Pasal 35 Sanksi → "Sanksi")
+- Pasal 35: "Sanksi"
+- Pasal 36-37 (BAB V): "Bab V" (but Pasal 38 Sanksi → "Sanksi")
+- Pasal 38: "Sanksi"
+- Pasal 39-40 (BAB VI): "Bab VI" (but Pasal 41 Sanksi → "Sanksi")
+- Pasal 41: "Sanksi"
+- Pasal 42-43 (BAB VII): "Bab VII" (but Pasal 44 Sanksi → "Sanksi")
+- Pasal 44: "Sanksi"
+- Pasal 45-46 (BAB VIII): "Bab VIII" (but Pasal 47 Sanksi → "Sanksi")
+- Pasal 47: "Sanksi"
+- Pasal 48-50 (BAB IX): "Bab IX"
+- Pasal 51-53 (BAB X): "Regulasi Lain"
+
+Let me start the extraction now. I'll be careful to:
+1. Use only pipes
+2. Empty fields = nothing between pipes
+3. Flatten lists properly
+4. Use correct Bagian labels
+5. Include proper explanations from PENJELASAN
+
+Let me write it out:
+
+Pasal 1 (Definitions - "Ketentuan"):
+17 numbered items (1-17), each a definition
+
+Pasal 2:
+- Ayat (1): standalone
+- Ayat (2): with sub-items a, b
+
+Pasal 3:
+- Ayat (1): standalone
+- Ayat (2): standalone
+- Ayat (3): standalone
+
+Pasal 4:
+- Ayat (1): with sub-items a, b
+- Ayat (2): standalone
+- Ayat (3): standalone
+
+Pasal 5:
+- Ayat (1): with sub-items a, b
+- Ayat (2): with sub-items a, b, c
+- Ayat (3): standalone
+- Ayat (4): standalone
+- Ayat (5): standalone
+
+Pasal 6:
+- Ayat (1): with sub-items a (with nested 1,2,3), b
+- Ayat (2): standalone
+- Ayat (3): standalone
+- Ayat (4): standalone
+- Ayat (5): standalone
+
+Pasal 7:
+- Ayat (1): with sub-items a, b, c
+- Ayat (2): standalone
+- Ayat (3): standalone
+
+Pasal 8:
+- Ayat (1): with sub-items a, b, c, d, e
+- Ayat (2): with sub-items a, b, c
+- Ayat (3): with sub-items a, b, c, d, e, f
+
+Pasal 9:
+- Standalone with sub-items a, b
+
+Pasal 10:
+- Standalone
+
+Pasal 11:
+- Standalone with sub-items a, b, c, d, e
+
+Pasal 12:
+- Standalone
+
+Pasal 13:
+- Ayat (1): standalone
+- Ayat (2): standalone
+
+Pasal 14:
+- Ayat (1): standalone
+- Ayat (2): standalone
+- Ayat (3): with sub-items a, b, c
+- Ayat (4): standalone
+
+Pasal 15:
+- Ayat (1): with sub-items a, b, c
+- Ayat (2): standalone
+
+Pasal 16:
+- Ayat (1): with sub-items a, b
+- Ayat (2): with sub-items a, b, c, d
+- Ayat (3): standalone
+- Ayat (4): standalone
+
+Pasal 17:
+- Ayat (1): standalone
+- Ayat (2): with sub-items a, b
+- Ayat (3): with sub-items a, b, c, d (d has nested 1, 2)
+
+Pasal 18 (Sanksi):
+- Ayat (1): standalone
+- Ayat (2): with sub-items a, b
+- Ayat (3): standalone
+
+Pasal 19:
+- Ayat (1): standalone
+- Ayat (2): standalone
+- Ayat (3): with sub-items a, b, c, d
+- Ayat (4): with sub-items a, b
+
+Pasal 20:
+- Ayat (1): with sub-items a</think>
+
+
+--- CYCLE 2 OUTPUT ---
+<think>The user wants me to resume the PSV extraction exactly where I left off. Let me carefully extract all the data from the document. I need to output it as PSV (Pipe-Separated Values) with 8 columns:
+Bagian (Section)|Kode Item|Item Ref|Item|Item Description|Kode Sub Item|Sub Item Ref|Sub Item
+
+Let me go through the document systematically. The document is POJK No. 1 Tahun 2024 about Kualitas Aset Bank Perekonomian Rakyat.
+
+Let me identify the sections:
+- BAB I: KETENTUAN UMUM (Pasal 1 - Definitions)
+- BAB II: KUALITAS ASET (Pasal 2-18)
+  - Bagian Kesatu: Umum (Pasal 2-6)
+  - Bagian Kedua: Kredit (Pasal 7-13)
+  - Bagian Ketiga: Surat Berharga (Pasal 14)
+  - Bagian Keempat: Penempatan pada Bank Lain (Pasal 15)
+  - Bagian Kelima: Penyertaan Modal (Pasal 16)
+  - Bagian Keenam: Aset Produktif yang Dijamin dengan Agunan Tunai (Pasal 17)
+  - Bagian Ketujuh: Sanksi (Pasal 18)
+- BAB III: PPKA DAN CKPN (Pasal 19-28)
+  - Bagian Kesatu: PPKA (Pasal 19-25)
+  - Bagian Kedua: CKPN (Pasal 26-27)
+  - Bagian Ketiga: Sanksi (Pasal 28)
+- BAB IV: RESTRUKTURISASI KREDIT (Pasal 29-35)
+  - Bagian Kesatu: Umum (Pasal 29-34)
+  - Bagian Kedua: Sanksi (Pasal 35)
+- BAB V: PROPERTI TERBENGKALAI (Pasal 36-38)
+  - Has Sanksi (Pasal 38)
+- BAB VI: AYDA (Pasal 39-41)
+  - Has Sanksi (Pasal 41)
+- BAB VII: HAPUS BUKU (Pasal 42-44)
+  - Has Sanksi (Pasal 44)
+- BAB VIII: Kebijakan Perkreditan dan Prosedur Perkreditan (Pasal 45-47)
+  - Has Sanksi (Pasal 47)
+- BAB IX: KETENTUAN PERALIHAN (Pasal 48-50)
+- BAB X: KETENTUAN PENUTUP (Pasal 51-53)
+
+Let me categorize:
+- Pasal 1 (Definitions) → "Ketentuan"
+- Pasal 18, 28, 35, 38, 41, 44, 47 (Sanksi) → "Sanksi"
+- Pasal 51, 52, 53 (Legal meta-data, revocations, effective dates) → "Regulasi Lain"
+- All others → original chapter name
+
+Let me start with Pasal 1 in BAB I:
+
+Pasal 1 has 17 numbered items (1-17). Since these are definition items in a "Ketentuan" section, and they're numbered like 1, 2, 3..., I need to decide how to treat them. Looking at the document structure, Pasal 1 is a single paragraph "Dalam Peraturan Otoritas Jasa Keuangan ini, yang dimaksud dengan:" followed by 17 numbered definitions.
+
+According to the rules:
+- Kode Item: continuous incremental integer for each new Item Ref
+- Item Ref: parent article/paragraph reference (e.g., "Pasal 2 ayat 2"). DO NOT include "huruf a" or sub-item references here.
+- Item: main parent text
+- Kode Sub Item: incremental for sub-items
+- Sub Item Ref: letter/number of list item (e.g., "a", "b", "1")
+- Sub Item: actual text of sub-item
+
+For Pasal 1, the "Item Ref" would be "Pasal 1" and each definition (1, 2, 3, etc.) is a sub-item.
+
+Let me carefully extract each article:
+
+Pasal 1 (Ketentuan):
+- Item Ref: Pasal 1
+- Item: "Dalam Peraturan Otoritas Jasa Keuangan ini, yang dimaksud dengan:"
+- Item Description: "Cukup jelas."
+- Sub items: 1-17
+
+Let me proceed with the extraction.
+
+Now let me do the full extraction carefully:
+
+BAB I - KETENTUAN UMUM
+Pasal 1 → "Ketentuan"
+Sub-items are numbered 1-17.
+
+For Pasal 1, the parent text is "Dalam Peraturan Otoritas Jasa Keuangan ini, yang dimaksud dengan:" and each definition is a sub-item numbered 1-17.
+
+Kode Item 1, Item Ref "Pasal 1", Item = the intro text, then sub-items 1-17 with definitions.
+
+Let me now do all the items:
+
+Pasal 1 (Ketentuan)
+Kode Item: 1
+Item Ref: Pasal 1
+Item: Dalam Peraturan Otoritas Jasa Keuangan ini, yang dimaksud dengan:
+Item Description: Cukup jelas.
+Sub Items:
+1. Bank Perekonomian Rakyat yang selanjutnya disingkat BPR adalah jenis bank konvensional yang dalam kegiatannya tidak memberikan jasa dalam lalu lintas giral secara langsung.
+2. Aset adalah aset produktif dan aset nonproduktif.
+3. Aset Produktif adalah penyediaan dana BPR dalam mata uang rupiah untuk memperoleh penghasilan, dalam bentuk kredit, surat berharga, penempatan pada bank lain, dan penyertaan modal.
+4. Penempatan pada Bank Lain adalah penempatan dana BPR pada bank lain dalam bentuk giro, tabungan, deposito, sertifikat deposito, kredit yang diberikan, dan penempatan dana lainnya yang sejenis.
+5. Surat Berharga adalah surat berharga yang diterbitkan oleh Bank Indonesia, Pemerintah, atau Pemerintah Daerah.
+6. Kredit adalah penyediaan dana atau tagihan yang dapat dipersamakan dengan itu, berdasarkan persetujuan atau kesepakatan pinjam-meminjam antara BPR dan pihak peminjam yang mewajibkan pihak peminjam untuk melunasi utangnya setelah jangka waktu tertentu dengan pemberian bunga termasuk pengalihan piutang.
+7. Penyertaan Modal adalah penanaman dana BPR dalam bentuk saham pada lembaga penunjang BPR dengan persyaratan sesuai dengan ketentuan peraturan perundang-undangan.
+8. Aset Nonproduktif adalah agunan yang diambil alih, properti terbengkalai, dan tagihan BPR yang timbul akibat pihak lawan tidak memenuhi kewajiban kepada BPR.
+9. Agunan Yang Diambil Alih selanjutnya disingkat AYDA adalah aset yang diperoleh BPR baik sebagian atau seluruhnya dengan cara pembelian melalui pelelangan maupun di luar pelelangan berdasarkan penyerahan secara sukarela oleh pemilik agunan atau berdasarkan kuasa untuk menjual di luar lelang dari pemilik agunan, dalam hal debitur tidak memenuhi kewajiban kepada BPR dengan ketentuan agunan yang dibeli untuk dicairkan secepatnya.
+10. Properti Terbengkalai adalah aset tetap dalam bentuk properti yang dimiliki BPR namun tidak digunakan untuk kegiatan usaha BPR yang berkaitan operasional BPR.
+11. Penyisihan Penilaian Kualitas Aset yang selanjutnya disingkat PPKA adalah penyisihan yang dihitung sebesar persentase tertentu berdasarkan kualitas Aset untuk keperluan perhitungan kewajiban penyediaan modal minimum BPR.
+12. Cadangan Kerugian Penurunan Nilai yang selanjutnya disingkat CKPN adalah penyisihan yang dibentuk atas penurunan nilai instrumen keuangan sesuai standar akuntansi keuangan.
+13. Kewajiban Penyediaan Modal Minimum yang selanjutnya disingkat KPMM adalah rasio modal terhadap aset tertimbang menurut risiko yang wajib disediakan oleh BPR sesuai dengan Peraturan Otoritas Jasa Keuangan mengenai kewajiban penyediaan modal minimum dan pemenuhan modal inti minimum bank perkreditan rakyat.
+14. Direksi adalah direksi bagi BPR berbentuk badan hukum perseroan terbatas, perusahaan umum daerah, perusahaan perseroan daerah, perusahaan daerah, atau pengurus bagi BPR berbentuk badan hukum koperasi.
+15. Dewan Komisaris adalah dewan komisaris bagi BPR berbentuk badan hukum perseroan terbatas, komisaris bagi BPR berbentuk badan hukum perusahaan perseroan daerah, dewan pengawas bagi BPR berbentuk badan hukum perusahaan umum daerah dan perusahaan daerah, serta pengawas bagi BPR berbentuk badan hukum koperasi.
+16. Nasabah Debitur yang selanjutnya disebut Debitur adalah nasabah yang memperoleh fasilitas Kredit atau yang dipersamakan dengan itu berdasarkan perjanjian BPR dengan nasabah yang bersangkutan.
+17. Restrukturisasi Kredit adalah upaya perbaikan yang dilakukan BPR dalam kegiatan perkreditan terhadap Debitur yang mengalami kesulitan untuk memenuhi kewajibannya.
+
+Pasal 2 (BAB II - Bagian Kesatu - Umum)
+Item Ref: Pasal 2 ayat (2)
+Wait, but the document shows Pasal 2 has ayat (1) and ayat (2) with sub-items a and b in ayat (2).
+
+Looking at the rules:
+- Item Ref: parent article/paragraph reference (e.g., "Pasal 2 ayat 2")
+- CRITICAL - FLATTENING LISTS: If a paragraph has sub-items, put parent text in Item and list text in Sub Item on same row. Repeat parent Item Ref and Item text on every row for that list.
+
+So for Pasal 2:
+- Ayat (1): standalone, no sub-items
+- Ayat (2): has sub-items a, b
+
+I should treat each ayat as a separate "Item Ref" potentially, but the rules say "Pasal 2 ayat 2" is the parent ref for the sub-items. Let me think about this.
+
+Actually, looking at the rules again: "Item Ref: The parent article/paragraph reference (e.g., 'Pasal 2 ayat 2'). DO NOT include 'huruf a' or sub-item references here."
+
+So each ayat is a separate "parent" item. For Pasal 2:
+- Kode Item 2, Item Ref "Pasal 2 ayat (1)", Item = the ayat 1 text, no sub-items
+- Kode Item 3, Item Ref "Pasal 2 ayat (2)", Item = the ayat 2 text, sub-items a, b
+
+Wait, but if I'm doing flattening, the parent Item Ref "Pasal 2 ayat (2)" should be on every row that has a, b sub-item. Let me re-read:
+
+"CRITICAL - FLATTENING LISTS: If a paragraph has sub-items (e.g., a, b, c), DO NOT create a standalone row just for the parent text. You must put the parent text in the Item column and the list text in the Sub Item column on the SAME row. You MUST repeat the parent Item Ref and Item text on EVERY SINGLE ROW for that list."
+
+OK so for ayat (2) which has sub-items a, b:
+- 2 rows
+- Each row has Item Ref "Pasal 2 ayat (2)" and Item = parent text "Untuk melaksanakan prinsip kehati-hatian sebagaimana dimaksud pada ayat (1), Direksi BPR wajib menilai, memantau, dan mengambil langkah yang diperlukan:"
+- Sub Item Ref a, b
+- Sub Item: text for a and b
+
+For ayat (1):
+- Standalone row, no sub-items
+
+OK let me proceed.
+
+For Item Description, the rules say:
+"Item Description: Find the explanation in PENJELASAN. If it says 'Cukup jelas.', write 'Cukup jelas.' (Do not include prefixes like 'Ayat 2' in the description)."
+
+So I should just get the explanation text without the "Ayat (2)" prefix. If there's no specific explanation for that ayat, but the whole Pasal has explanation, then the explanation goes with ayat (1).
+
+Let me look at the PENJELASAN structure:
+- Pasal 1: Cukup jelas.
+- Pasal 2: Ayat (1) - ..., Ayat (2) - ...
+- Pasal 3: Ayat (1) Cukup jelas, Ayat (2) ..., Ayat (3) Cukup jelas.
+- Pasal 4: Ayat (1) ..., Ayat (2) ..., Ayat (3) ...
+- Pasal 5: Ayat (1) ..., Ayat (2) Huruf a, Huruf b, Huruf c, Ayat (3) ..., Ayat (4) ..., Ayat (5) Cukup jelas.
+- Pasal 6: Ayat (1) Huruf a ..., Huruf b ..., Ayat (2) Cukup jelas, Ayat (3) Cukup jelas, Ayat (4) ..., Ayat (5) Cukup jelas.
+- Pasal 7: Ayat (1) ..., Ayat (2) ..., Ayat (3) Cukup jelas.
+- Pasal 8: Ayat (1) Huruf a-e, Ayat (2) Huruf a-c, Ayat (3) Huruf a-f
+- Pasal 9: Cukup jelas.
+- Pasal 10: ...
+- Pasal 11: Cukup jelas.
+- Pasal 12: ...
+- Pasal 13: Ayat (1) ..., Ayat (2) Cukup jelas.
+- Pasal 14: Cukup jelas.
+- Pasal 15: Cukup jelas.
+- Pasal 16: Cukup jelas.
+- Pasal 17: Ayat (1) Cukup jelas, Ayat (2) Cukup jelas, Ayat (3) ...
+- Pasal 18: Cukup jelas.
+- Pasal 19: Cukup jelas.
+- Pasal 20: Ayat (1) Huruf a-k, Ayat (2) Cukup jelas, Ayat (3) ..., Ayat (4) ..., Ayat (5) ..., Ayat (6) ...
+- Pasal 21: Ayat (1) ..., Ayat (2) Cukup jelas, Ayat (3) ...
+- Pasal 22: Cukup jelas.
+- Pasal 23: ...
+- Pasal 24: Cukup jelas.
+- Pasal 25: ...
+- Pasal 26: Cukup jelas.
+- Pasal 27: Cukup jelas.
+- Pasal 28: Cukup jelas.
+- Pasal 29: Ayat (1) Cukup jelas, Ayat (2) Huruf a, b, c, Ayat (3) Cukup jelas, Ayat (4) ...
+- Pasal 30: Ayat (1) Cukup jelas, Ayat (2) Huruf a-d
+- Pasal 31: Ayat (1) Cukup jelas, Ayat (2) ..., Ayat (3) Cukup jelas.
+- Pasal 32: ...
+- Pasal 33: Cukup jelas.
+- Pasal 34: Cukup jelas.
+- Pasal 35: Cukup jelas.
+- Pasal 36: Ayat (1) ..., Ayat (2) ..., Ayat (3) Cukup jelas, Ayat (4) ...
+- Pasal 37: Ayat (1) ..., Ayat (2) ..., Ayat (3) ..., Ayat (4) ...
+- Pasal 38: Cukup jelas.
+- Pasal 39: Ayat (1) Cukup jelas, Ayat (2) ..., Ayat (3) Cukup jelas, Ayat (4) ..., Ayat (5) Cukup jelas, Ayat (6) Cukup jelas, Ayat (7) Cukup jelas, Ayat (8) Cukup jelas.
+- Pasal 40: Ayat (1) ..., Ayat (2) ..., Ayat (3) ..., Ayat (4) Cukup jelas, Ayat (5) Cukup jelas, Ayat (6) ...
+- Pasal 41: Cukup jelas.
+- Pasal 42: Ayat (1) Cukup jelas, Ayat (2) ...
+- Pasal 43: Ayat (1) ..., Ayat (2) Cukup jelas, Ayat (3) Cukup jelas.
+- Pasal 44: Cukup jelas.
+- Pasal 45: Ayat (1) ..., Ayat (2) Cukup jelas, Ayat (3) Cukup jelas, Ayat (4) Cukup jelas.
+- Pasal 46: Ayat (1) Cukup jelas, Ayat (2) Cukup jelas, Ayat (3) Huruf a, Angka 1-5, Huruf b, c
+- Pasal 47: Cukup jelas.
+- Pasal 48: Cukup jelas.
+- Pasal 49: Cukup jelas.
+- Pasal 50: Cukup jelas.
+- Pasal 51: Cukup jelas.
+- Pasal 52: Cukup jelas.
+- Pasal 53: Cukup jelas.
+
+Now let me proceed with the extraction. I'll be systematic.
+
+For each Pasal, I need to:
+1. Determine the Section (Bagian)
+2. Get the Kode Item (continuous)
+3. Get the Item Ref (e.g., "Pasal 2 ayat (1)")
+4. Get the Item text
+5. Get the Item Description from PENJELASAN
+6. For each sub-item, get Kode Sub Item, Sub Item Ref, and Sub Item text
+
+Let me start:
+
+Pasal 1 (Ketentuan)
+- Item Ref: Pasal 1
+- Item: "Dalam Peraturan Otoritas Jasa Keuangan ini, yang dimaksud dengan:"
+- Item Description: Cukup jelas.
+- Sub Items 1-17 with definitions
+
+Pasal 2 (BAB II - KUALITAS ASET, Bagian Kesatu - Umum)
+- Ayat (1): standalone
+- Ayat (2): has sub-items a, b
+
+Pasal 3 (BAB II)
+- Ayat (1): standalone
+- Ayat (2): standalone
+- Ayat (3): standalone
+
+Pasal 4 (BAB II)
+- Ayat (1): has sub-items a, b
+- Ayat (2): standalone
+- Ayat (3): standalone
+
+Pasal 5 (BAB II)
+- Ayat (1): has sub-items a, b
+- Ayat (2): has sub-items a, b, c
+- Ayat (3): standalone
+- Ayat (4): standalone
+- Ayat (5): standalone
+
+Pasal 6 (BAB II)
+- Ayat (1): has sub-items a, b (a has nested 1, 2, 3)
+- Ayat (2): standalone
+- Ayat (3): standalone
+- Ayat (4): standalone
+- Ayat (5): standalone
+
+Pasal 7 (BAB II - Bagian Kedua - Kredit)
+- Ayat (1): has sub-items a, b, c
+- Ayat (2): standalone
+- Ayat (3): standalone
+
+Pasal 8 (BAB II - Kredit)
+- Ayat (1): has sub-items a, b, c, d, e
+- Ayat (2): has sub-items a, b, c
+- Ayat (3): has sub-items a, b, c, d, e, f
+
+Pasal 9 (BAB II - Kredit)
+- has sub-items a, b
+
+Pasal 10 (BAB II - Kredit) - standalone
+
+Pasal 11 (BAB II - Kredit) - has sub-items a, b, c, d, e
+
+Pasal 12 (BAB II - Kredit) - standalone
+
+Pasal 13 (BAB II - Kredit)
+- Ayat (1): standalone
+- Ayat (2): standalone
+
+Pasal 14 (BAB II - Bagian Ketiga - Surat Berharga)
+- Ayat (1): standalone
+- Ayat (2): standalone
+- Ayat (3): has sub-items a, b, c
+- Ayat (4): standalone
+
+Pasal 15 (BAB II - Bagian Keempat - Penempatan pada Bank Lain)
+- Ayat (1): has sub-items a, b, c
+- Ayat (2): standalone
+
+Pasal 16 (BAB II - Bagian Kelima - Penyertaan Modal)
+- Ayat (1): has sub-items a, b
+- Ayat (2): has sub-items a, b, c, d
+- Ayat (3): standalone
+- Ayat (4): standalone
+
+Pasal 17 (BAB II - Bagian Keenam - Aset Produktif yang Dijamin dengan Agunan Tunai)
+- Ayat (1): standalone
+- Ayat (2): has sub-items a, b
+- Ayat (3): has sub-items a, b</think>
+
+
