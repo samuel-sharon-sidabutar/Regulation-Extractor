@@ -14,7 +14,7 @@ from openai import OpenAI
 # CONFIGURATION & CENTRALIZED SETTINGS
 # ==========================================
 CONFIG = {
-    "MODEL": "deepseek",  # Switch to "minimax" to change model — one word only
+    "MODEL": "minimax",  # Switch to "minimax" to change model — one word only
     "WORK_DIR": "regulations",
     "FAILED_DIR": os.path.join("regulations", "failed_files"),
     "CONTINUOUS_EXECUTION": True,
@@ -76,33 +76,44 @@ To minimize token usage, you must use minified keys. Output exactly ONE valid JS
 
 **MINIFIED JSON SCHEMA (7 KEYS):**
 Each line must be a single flat object with these exact keys:
-* `sec`: Bagian (Section) -> Chapter/Section name (e.g., "Bab II"). See CATEGORIZATION RULES.
-* `ref_item`: Item Ref -> The parent reference (e.g., "Pasal 2" or "Pasal 2 ayat 1"). NEVER include sub-item tags here.
-* `item`: Item -> Main text of the Item. Strip numbering prefixes (e.g., write "BPR wajib..." instead of "(1) BPR wajib...").
-* `desc`: Item Description -> Explanation from "PENJELASAN". If it says "Cukup jelas.", write "Cukup jelas.".
+* `sec`: Bagian (Section) -> Evaluate the semantic intent of the article dynamically. See STRICT CATEGORIZATION RULES.
+* `ref_item`: Item Ref -> The parent reference (e.g., "Pasal 2" or "Pasal 2 ayat 1"). NEVER include "huruf" or "angka" tags here.
+* `item`: Item -> Main text of the Item. Strip numbering prefixes.
+* `desc`: Item Description -> Explanation strictly from the "PENJELASAN" section. See ANTI-LAZINESS RULE.
 * `k_sub`: Kode Sub Item -> Incremental integer (1, 2, 3...) for sub-items under this parent. Use null if none.
 * `ref_sub`: Sub Item Ref -> Letter or number of the list item (e.g., "a", "b", "1"). Use "" if none.
-* `sub`: Sub Item -> Actual text of the sub-item. Strip its prefix (e.g., write "agar kualitas..." instead of "a. agar kualitas...").
+* `sub`: Sub Item -> Actual text of the sub-item. Strip its prefix. See 3-LEVEL NESTING RULE.
 
 **INDONESIAN LEGAL HIERARCHY RULES:**
 * **Pasal** (Article): Top-level grouping.
-* **Ayat** (Paragraph): Numbered lists inside a Pasal, e.g., (1), (2). An 'Ayat' is ALWAYS an Item. Never group multiple Ayat together.
+* **Ayat** (Paragraph): Numbered lists inside a Pasal, e.g., (1), (2). An 'Ayat' is ALWAYS an Item. 
 * **List Elements** (Huruf/Angka): Lists inside an Ayat or Pasal (a, b, c or 1, 2, 3). These are ALWAYS Sub-items.
 
-**DYNAMIC HIERARCHY SCENARIOS:**
-* **Scenario A (Pasal has Ayat):** The Ayat is the Item. Any list elements under it are Sub-items. `ref_item` is "Pasal X ayat Y".
-* **Scenario B (Pasal jumps to a List):** If there are no Ayat, the Pasal is the Item. List elements are Sub-items. `ref_item` is "Pasal X".
-* **Scenario C (Standalone Pasal):** If no subdivisions exist, the Pasal is the Item. Sub-item fields remain empty/null. `ref_item` is "Pasal X".
+**STRICT 3-LEVEL NESTING RULE (CRITICAL):**
+Your output schema ONLY supports 2 levels (Item and Sub-item). If the document goes 3 levels deep (e.g., Pasal 46 ayat 3 -> huruf a -> angka 1, 2, 3), you MUST flatten the 3rd level into the 2nd level.
+* NEVER promote a "huruf" to an Item. `ref_item` MUST NEVER contain the word "huruf" or "angka".
+* Keep the Ayat as the `ref_item`. Keep the huruf as the `ref_sub`.
+* Concatenate the 3rd-level list directly into the `sub` string. 
+* Example for Pasal 46 ayat 3 huruf a: `ref_item` is "Pasal 46 ayat 3", `ref_sub` is "a", and `sub` is "penerapan prinsip kehati-hatian berupa: 1. penilaian... 2. pemenuhan... 3. batas..."
+
+**ANTI-LAZINESS RULE FOR "PENJELASAN" (CRITICAL):**
+You must extract the ENTIRE verbatim text from the Penjelasan for the `desc` field, even if it is very long or contains lists. YOU MUST ONLY output "Cukup jelas." if the original document literally only contains those two words for that specific article. Do not use "Cukup jelas" as a lazy placeholder.
+
+BAD EXAMPLE (Lazy):
+{"desc": "Cukup jelas."} // When the document actually has a paragraph of explanation.
+
+GOOD EXAMPLE:
+{"desc": "Yang dimaksud dengan 'kualitas aset' adalah penilaian terhadap kondisi keuangan debitur dan prospek usaha..."}
+
+**STRICT CATEGORIZATION RULES (`sec` field):**
+Do not just blindly copy the Chapter number (e.g., "Bab III"). You must evaluate the semantic content of the specific Pasal. Overwrite the `sec` value EXACTLY as follows:
+* **"Ketentuan"**: If the article defines terms (usually Pasal 1).
+* **"Sanksi"**: If the article dictates administrative penalties, fines, or "Sanksi".
+* **"Regulasi Lain"**: If the article is about "Ketentuan Peralihan" or "Ketentuan Penutup".
+* For all standard operational rules, keep the original Chapter title (e.g., "Bab II").
 
 **FLATTENING LISTS REQUIREMENT:**
-You must separate parent text from sub-item text. If an Item has multiple Sub-items, output a distinct JSON object line for EACH Sub-item. Repeat the parent keys (`sec`, `ref_item`, `item`, `desc`) identically on every row, while changing the sub-item specific keys (`k_sub`, `ref_sub`, `sub`).
-
-**CATEGORIZATION RULES:**
-Do not reorder text chronologically. Overwrite the `sec` value exactly as follows for special articles:
-* **"Ketentuan"**: Glossaries or definitions of terms.
-* **"Sanksi"**: Administrative consequences or penalties.
-* **"Regulasi Lain"**: Legal meta-data (transitional timelines, effective dates).
-* For all standard operational rules, keep the original Chapter title (e.g., "Bab II").
+You must separate parent text from sub-item text. If an Item has multiple Sub-items, output a distinct JSON object line for EACH Sub-item. Repeat the parent keys (`sec`, `ref_item`, `item`, `desc`) identically on every row.
 
 **OUTPUT FORMAT:**
 Start your response with `[` on its own line. Output each object on its own line followed by a comma. When completely finished, output `[END_OF_DOCUMENT]` on a new line.
@@ -585,6 +596,8 @@ def get_file_choice(files, file_type):
 
 def main():
     setup_environment()
+    print("\n===Script Configs===")
+    print(CONFIG)
     print("\n=== POJK Data Extraction Pipeline ===")
     print("1. Convert PDF to MD\n2. Convert MD to CSV (Via Line JSON Extraction)\n3. Convert PDF to CSV (End-to-End)\n0. Exit")
     
