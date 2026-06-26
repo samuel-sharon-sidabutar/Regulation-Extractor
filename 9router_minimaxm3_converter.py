@@ -16,7 +16,7 @@ CONTINUOUS_EXECUTION = True
 FORCED_OVERWRITE = True
 
 ROUTER_IP = "http://43.157.202.81:20128/v1" 
-ROUTER_KEY = "sk-6b3ac6ef8e3b70c9-qy4p0x-767d185d" 
+ROUTER_KEY = "sk-6b3ac6ef8e3b70c9-qy4p0x-767d185d" # deleted
 MODEL_ID = "MiniMax-M3"  
 
 for folder in [WORK_DIR, FAILED_DIR]:

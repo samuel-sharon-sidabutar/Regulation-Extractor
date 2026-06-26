@@ -2,7 +2,7 @@ from openai import OpenAI
 
 # Your Router Config
 ROUTER_IP = "http://43.157.202.81:20128/v1"
-ROUTER_KEY = "sk-6b3ac6ef8e3b70c9-qy4p0x-767d185d"
+ROUTER_KEY = "sk-6b3ac6ef8e3b70c9-qy4p0x-767d185d" # deleted
 MODEL_ID = "MiniMax-M3"  
 
 client = OpenAI(

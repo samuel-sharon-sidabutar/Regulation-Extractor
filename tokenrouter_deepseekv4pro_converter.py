@@ -14,21 +14,46 @@ from openai import OpenAI
 # CONFIGURATION & CENTRALIZED SETTINGS
 # ==========================================
 CONFIG = {
+    "MODEL": "deepseek",  # Switch to "minimax" to change model — one word only
     "WORK_DIR": "regulations",
     "FAILED_DIR": os.path.join("regulations", "failed_files"),
-    "LOG_DIR": os.path.join("regulations", "deepseek_logs"),
     "CONTINUOUS_EXECUTION": True,
     "FORCED_OVERWRITE": True,
     "ROUTER_IP": "https://api.tokenrouter.com/v1",
-    "ROUTER_KEY": os.environ.get("TOKENROUTER_API_KEY"), # use setx to set the API key 
-    "MODEL_ID": "deepseek/deepseek-v4-pro"
+    "ROUTER_KEY": os.environ.get("TOKENROUTER_API_KEY"),
+    "API_RETRY_MAX": 4,
+    "API_RETRY_BASE_DELAY_SEC": 30,
+    "MAX_LOOPS": 30,
+    # Below are filled by resolve_model_config() at startup:
+    "LOG_DIR": "",
+    "MODEL_ID": ""
 }
+
+MODEL_PRESETS = {
+    "deepseek": {
+        "LOG_DIR": os.path.join("regulations", "deepseek_logs"),
+        "MODEL_ID": "deepseek/deepseek-v4-pro",
+        "TEMPERATURE": 0.1,
+    },
+    "minimax": {
+        "LOG_DIR": os.path.join("regulations", "minimax_logs"),
+        "MODEL_ID": "MiniMax-M3",
+        "TEMPERATURE": 0.1,
+    },
+}
+
+def resolve_model_config():
+    """Apply the active MODEL preset into CONFIG so everything downstream uses CONFIG directly."""
+    preset = CONFIG["MODEL"]
+    if preset not in MODEL_PRESETS:
+        print(f"[CRITICAL ERROR] Unknown MODEL '{preset}'. Valid options: {list(MODEL_PRESETS.keys())}")
+        sys.exit(1)
+    CONFIG.update(MODEL_PRESETS[preset])
 
 # Used to structure data integrity errors dynamically
 MalformedRow = namedtuple("MalformedRow", ["row_num", "raw_fragment"])
 
-# Safe initialization to prevent latent bugs before setup_environment runs
-LOG_FILE = os.path.join(CONFIG.get("LOG_DIR", "."), f"fallback_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+LOG_FILE = ""  # Set during setup_environment()
 
 # ==========================================
 # PROMPTS
@@ -88,6 +113,7 @@ Start your response with `[` on its own line. Output each object on its own line
 # ==========================================
 def setup_environment():
     global LOG_FILE
+    resolve_model_config()
     
     if not CONFIG["ROUTER_KEY"]:
         print("\n[CRITICAL ERROR] API key environment variable is missing. Exiting...")
@@ -229,18 +255,45 @@ def parse_metadata(meta_raw):
             return parts[0], parts[1], parts[2]
     return "Unknown", "POJK", "Unknown"
 
+def _is_complete_json_object(line):
+    """Check if a line is a valid complete JSON object (not truncated)."""
+    stripped = line.strip().rstrip(',')
+    if not stripped or stripped in ['[', ']']:
+        return True
+    try:
+        obj = json.loads(stripped)
+        return isinstance(obj, dict)
+    except (json.JSONDecodeError, ValueError):
+        return False
+
 def handle_cycle_save(full_json_text, csv_path, meta_regulasi, meta_tipe, meta_tanggal):
-    """Handles the mid-cycle popping of cut-off JSON fragments and partial saves."""
+    """Handles the mid-cycle popping of cut-off JSON fragments and partial saves.
+    
+    Discards the last line ONLY if it doesn't end with a newline AND doesn't parse
+    as valid JSON. This preserves complete trailing objects while cutting truly
+    truncated ones.
+    """
     lines_in_buffer = full_json_text.split('\n')
     last_char = full_json_text[-1] if full_json_text else ""
     
+    should_discard = False
+    discarded_fragment = ""
+    
     if last_char != '\n' and lines_in_buffer and full_json_text.strip():
-        discarded_fragment = lines_in_buffer.pop()
+        candidate = lines_in_buffer[-1]
+        if not _is_complete_json_object(candidate):
+            should_discard = True
+            discarded_fragment = lines_in_buffer.pop()
+            line_status = f"Cut off mid-object (Deleted: '{discarded_fragment[:20]}...')"
+        else:
+            line_status = "Clean cut (Last line is complete JSON)"
+    else:
+        line_status = "Clean cut (Ends with newline)"
+    
+    if should_discard:
         safe_json_to_save = '\n'.join(lines_in_buffer) + '\n'
-        line_status = f"Cut off mid-object (Deleted: '{discarded_fragment[:20]}...')"
     else:
         safe_json_to_save = full_json_text
-        line_status = "Clean cut (Object line finished)"
         
     current_row_count = len([line for line in lines_in_buffer if line.strip() and line.strip() not in ['[', ']', ',']])
     
@@ -251,9 +304,9 @@ def handle_cycle_save(full_json_text, csv_path, meta_regulasi, meta_tipe, meta_t
     return safe_json_to_save, line_status, current_row_count
 
 def build_continuation_history(user_string, full_json_text):
-    """Builds the continuation prompt using an expanded 60-line context window."""
+    """Builds the continuation prompt using an expanded 120-line context window."""
     raw_lines = full_json_text.split('\n')
-    last_context = '\n'.join(raw_lines[-60:]) 
+    last_context = '\n'.join(raw_lines[-120:]) 
 
     return [
         {"role": "system", "content": MASTER_PROMPT},
@@ -275,7 +328,8 @@ def convert_pdf_to_md(pdf_path, md_path, quiet=False):
     return result.text_content
 
 def call_openai_with_retry(client, model_id, conversation_history):
-    max_attempts = 2
+    max_attempts = CONFIG["API_RETRY_MAX"]
+    base_delay = CONFIG["API_RETRY_BASE_DELAY_SEC"]
     attempt = 1
     
     while attempt <= max_attempts:
@@ -283,7 +337,7 @@ def call_openai_with_retry(client, model_id, conversation_history):
             return client.chat.completions.create(
                 model=model_id,
                 messages=conversation_history,
-                temperature=0.0,
+                temperature=CONFIG["TEMPERATURE"],
                 stream=True,
                 extra_body={"thinking": {"type": "disabled"}}
             )
@@ -293,9 +347,10 @@ def call_openai_with_retry(client, model_id, conversation_history):
                 if attempt >= max_attempts:
                     raise Exception(f"Max attempts ({max_attempts}) exceeded for API limit.")
                 
-                print(f"\n  [!] API Quota Limit Hit (403). Pausing for 3 minutes... (Attempt {attempt} failed, retrying...)")
-                print("  [!] ", error_msg)
-                time.sleep(180) 
+                delay = base_delay * (2 ** (attempt - 1))
+                print(f"\n  [!] API Quota Limit Hit (403). Pausing for {delay}s (exponential backoff)... (Attempt {attempt}/{max_attempts})")
+                print(f"  [!] {error_msg}")
+                time.sleep(delay)
                 attempt += 1
             else:
                 raise e
@@ -324,8 +379,7 @@ def extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe,
         {"role": "assistant", "content": "[\n"}
     ]
 
-    # Target updated: Context configuration maximum cycle limit boosted to 30
-    max_loops = 30 
+    max_loops = CONFIG["MAX_LOOPS"]
     loop_count = 1 
     abort_batch = False 
     full_json_text = "[\n"
@@ -370,7 +424,12 @@ def extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe,
     print(f"  [OK] Final stitched file compiled and saved to {csv_path}")
     print_summary(csv_path, malformed_errors)
     
-    return final_row_count, abort_batch, malformed_errors, loop_count
+    deduped_count = deduplicate_csv(csv_path)
+    if deduped_count != final_row_count:
+        removed = final_row_count - deduped_count
+        print(f"  [OK] Deduplicated {removed} duplicate row(s) from {csv_path}")
+    
+    return deduped_count, abort_batch, malformed_errors, loop_count
 
 def process_single_file(md_path, csv_path, md_content=None):
     filename_base = os.path.basename(md_path)
@@ -388,23 +447,141 @@ def process_single_file(md_path, csv_path, md_content=None):
     return extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe, meta_tanggal)
 
 # ==========================================
+# COMBINE CSVS
+# ==========================================
+def combine_csvs(csv_paths, output_path):
+    """Combine multiple CSVs into one. Keeps the header from the first file only."""
+    if not csv_paths:
+        return 0
+    
+    total_rows = 0
+    header_written = False
+    
+    with open(output_path, "w", encoding="utf-8") as out:
+        for csv_path in csv_paths:
+            if not os.path.exists(csv_path):
+                continue
+            with open(csv_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            
+            if not lines:
+                continue
+            
+            data_start = 0
+            if header_written:
+                for i, line in enumerate(lines):
+                    if not line.startswith("Regulasi|"):
+                        data_start = i
+                        break
+                    data_start = i + 1
+            else:
+                if lines[0].startswith("Regulasi|"):
+                    out.write(lines[0])
+                    header_written = True
+                    data_start = 1
+            
+            for line in lines[data_start:]:
+                stripped = line.strip()
+                if stripped:
+                    out.write(line)
+                    total_rows += 1
+    
+    return total_rows
+
+def deduplicate_csv(csv_path):
+    """Remove duplicate data rows (byte-for-byte identical) from a CSV in-place. Keeps the header."""
+    if not os.path.exists(csv_path):
+        return 0
+    
+    with open(csv_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    
+    if len(lines) <= 1:
+        return 0
+    
+    header = lines[0]
+    data_lines = lines[1:]
+    
+    seen = set()
+    unique = []
+    for line in data_lines:
+        stripped = line.strip()
+        if stripped and stripped not in seen:
+            seen.add(stripped)
+            unique.append(line)
+    
+    with open(csv_path, "w", encoding="utf-8") as f:
+        f.write(header)
+        f.writelines(unique)
+    
+    return len(unique)
+
+# ==========================================
 # CLI APPLICATION LOOP
 # ==========================================
+def parse_file_selection(input_str, total_files):
+    """Parse comma/range selection like '2,4,5,6' or '2-4' or '1,3-5,7' into list of indices.
+    
+    Returns a sorted, deduplicated list of file indices (0-based).
+    Choice '1' is reserved for 'all files' and is handled before calling this.
+    """
+    selected = set()
+    parts = [p.strip() for p in input_str.split(",")]
+    
+    for part in parts:
+        if not part:
+            continue
+        if "-" in part:
+            range_parts = part.split("-", 1)
+            try:
+                start = int(range_parts[0].strip())
+                end = int(range_parts[1].strip())
+                for i in range(start, end + 1):
+                    selected.add(i)
+            except ValueError:
+                return None  # Invalid range
+        else:
+            try:
+                selected.add(int(part))
+            except ValueError:
+                return None  # Invalid number
+    
+    return sorted(selected)
+
 def get_file_choice(files, file_type):
     if not files:
         print(f"\nNo .{file_type} files found.")
         return []
         
-    print(f"\nWhich .{file_type} file would you like to process?\n1. All files of type .{file_type}")
-    for i, file_path in enumerate(files, start=2): print(f"{i}. {os.path.basename(file_path)}")
-        
-    choice = input("\nEnter choice (number): ").strip()
-    if choice == '1': return files
-    try:
-        index = int(choice) - 2
-        if 0 <= index < len(files): return [files[index]]
-    except ValueError: pass
-    print("Invalid choice."); return []
+    print(f"\nWhich .{file_type} file(s) would you like to process?")
+    print("  1. All files")
+    for i, file_path in enumerate(files, start=2):
+        print(f"  {i}. {os.path.basename(file_path)}")
+    print("\n  Examples: '2,4,5,6' | '2-4' | '1,3-5,7' | '1' (all)")
+    
+    choice = input("\nEnter choice: ").strip()
+    
+    if choice == '1':
+        return files
+    
+    parsed = parse_file_selection(choice, len(files))
+    if parsed is None:
+        print("Invalid input. Use numbers, commas, and dashes (e.g. '2,4,5,6' or '2-4').")
+        return []
+    
+    # Map display numbers (1-based, 2+) to file indices (0-based)
+    result = []
+    for num in parsed:
+        if num < 2 or num > len(files) + 1:
+            print(f"  [!] '{num}' is out of range (valid: 2-{len(files) + 1}). Skipping.")
+            continue
+        result.append(files[num - 2])
+    
+    if not result:
+        print("No valid files selected.")
+        return []
+    
+    return result
 
 def main():
     setup_environment()
@@ -420,6 +597,7 @@ def main():
     selected_files = get_file_choice(target_files, file_type)
     
     if not selected_files: sys.exit(0)
+    
     batch_results = []
     global_start_time = time.time()
 
@@ -472,10 +650,11 @@ def main():
                     status = "Success" if not errs else f"Warn ({len(errs)} Bad)"
                     
                     batch_results.append({
-                        "file": base_name, 
-                        "rows": rows_ext, 
-                        "cycles": cycles, 
-                        "status": status, 
+                        "file": base_name,
+                        "csv_path": csv_path,
+                        "rows": rows_ext,
+                        "cycles": cycles,
+                        "status": status,
                         "duration": time.time() - file_start_time
                     })
                     
@@ -483,10 +662,11 @@ def main():
                         break
                 else:
                     batch_results.append({
-                        "file": base_name, 
-                        "rows": 0, 
-                        "cycles": 0, 
-                        "status": "Skipped", 
+                        "file": base_name,
+                        "csv_path": "",
+                        "rows": 0,
+                        "cycles": 0,
+                        "status": "Skipped",
                         "duration": 0
                     })
                     
@@ -503,14 +683,16 @@ def main():
                     print(f"  [WARNING] Failed to quarantine files: {quarantine_err}")
                     
                 batch_results.append({
-                    "file": base_name, 
-                    "rows": 0, 
-                    "cycles": 1, 
-                    "status": f"Failed", 
+                    "file": base_name,
+                    "csv_path": "",
+                    "rows": 0,
+                    "cycles": 1,
+                    "status": "Failed",
                     "duration": time.time() - file_start_time
                 })
 
     if batch_results:
+        total_global_time = time.time() - global_start_time
         print("\n\n" + "="*89)
         print("                                 BATCH EXECUTION REPORT")
         print("="*89)
@@ -526,8 +708,45 @@ def main():
                 success_count += 1
                 
         print("-" * 89)
-        print(f"  Total Time: {format_time(time.time() - global_start_time)} | Data Rows: {total_rows} | Success Rate: {success_count}/{len(batch_results)}")
+        print(f"  Total Time: {format_time(total_global_time)} | Data Rows: {total_rows} | Success Rate: {success_count}/{len(batch_results)}")
         print("="*89)
+        
+        # Persist batch report as JSON
+        TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
+        report_data = {
+            "timestamp": TIMESTAMP,
+            "total_time_sec": round(total_global_time, 2),
+            "total_rows": total_rows,
+            "success_count": success_count,
+            "total_files": len(batch_results),
+            "files": [
+                {
+                    "file": r["file"],
+                    "rows": r["rows"],
+                    "cycles": r["cycles"],
+                    "duration_sec": round(r["duration"], 2),
+                    "status": r["status"]
+                }
+                for r in batch_results
+            ]
+        }
+        report_path = os.path.join(CONFIG["LOG_DIR"], f"report_{TIMESTAMP}.json")
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, indent=2, ensure_ascii=False)
+        print(f"\n  [REPORT] Saved to: {report_path}")
+        
+        # Ask to combine successful CSVs
+        successful_csvs = [
+            r["csv_path"] for r in batch_results
+            if r.get("csv_path") and os.path.exists(r["csv_path"])
+        ]
+        if successful_csvs:
+            choice = input("\n  Combine all generated CSVs into one file? (y/n): ").strip().lower()
+            if choice == 'y':
+                combined_name = f"combined_{TIMESTAMP}.csv"
+                combined_path = os.path.join(CONFIG["WORK_DIR"], combined_name)
+                combined_rows = combine_csvs(successful_csvs, combined_path)
+                print(f"  [OK] Combined {len(successful_csvs)} CSV(s) -> {combined_path} ({combined_rows} data rows)")
 
 if __name__ == "__main__":
     main()
