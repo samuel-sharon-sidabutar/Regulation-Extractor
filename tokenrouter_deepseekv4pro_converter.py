@@ -163,12 +163,14 @@ def prompt_overwrite(filepath):
         if os.path.exists(filepath):
             print(f"  [!] Overwriting: '{os.path.basename(filepath)}'")
         return 'y'
-        
-    if os.path.exists(filepath):
-        while True:
-            choice = input(f"  [!] '{os.path.basename(filepath)}' exists. Overwrite? (y/n / c): ").strip().lower()
-            if choice in ['y', 'n', 'c']: return choice
-    return 'y'
+
+    if not os.path.exists(filepath):
+        return 'y'
+
+    while True:
+        choice = input(f"  [!] '{os.path.basename(filepath)}' exists. Overwrite? (y/n / c): ").strip().lower()
+        if choice in ['y', 'n', 'c']:
+            return choice
 
 def is_document_ended(text):
     signals = [
@@ -279,8 +281,7 @@ def parse_metadata(meta_raw):
             return parts[0], parts[1], parts[2]
     return "Unknown", "POJK", "Unknown"
 
-def _is_complete_json_object(line):
-    """Check if a line is a valid complete JSON object (not truncated)."""
+def is_complete_json_object(line):
     stripped = line.strip().rstrip(',')
     if not stripped or stripped in ['[', ']']:
         return True
@@ -307,39 +308,37 @@ def find_first_malformed(json_stream, start_from=0):
 
 def handle_cycle_save(full_json_text, csv_path, meta_regulasi, meta_tipe, meta_tanggal):
     """Handles the mid-cycle popping of cut-off JSON fragments and partial saves.
-    
+
     Discards the last line ONLY if it doesn't end with a newline AND doesn't parse
     as valid JSON. This preserves complete trailing objects while cutting truly
     truncated ones.
     """
     lines_in_buffer = full_json_text.split('\n')
     last_char = full_json_text[-1] if full_json_text else ""
-    
-    should_discard = False
-    discarded_fragment = ""
-    
-    if last_char != '\n' and lines_in_buffer and full_json_text.strip():
-        candidate = lines_in_buffer[-1]
-        if not _is_complete_json_object(candidate):
-            should_discard = True
-            discarded_fragment = lines_in_buffer.pop()
-            line_status = f"Cut off mid-object (Deleted: '{discarded_fragment[:20]}...')"
-        else:
-            line_status = "Clean cut (Last line is complete JSON)"
+
+    line_status = "Clean cut (Ends with newline)"
+    safe_json_to_save = full_json_text
+
+    # Guard: only check truncation when the response didn't end cleanly
+    if not (last_char != '\n' and lines_in_buffer and full_json_text.strip()):
+        current_row_count = len([l for l in lines_in_buffer if l.strip() and l.strip() not in ['[', ']', ',']])
+        partial_csv, _, _ = sanitize_and_validate_csv(safe_json_to_save, meta_regulasi, meta_tipe, meta_tanggal)
+        with open(csv_path, "w", encoding="utf-8") as f:
+            f.write(partial_csv)
+        return safe_json_to_save, line_status, current_row_count
+
+    candidate = lines_in_buffer[-1]
+    if is_complete_json_object(candidate):
+        line_status = "Clean cut (Last line is complete JSON)"
     else:
-        line_status = "Clean cut (Ends with newline)"
-    
-    if should_discard:
+        lines_in_buffer.pop()
         safe_json_to_save = '\n'.join(lines_in_buffer) + '\n'
-    else:
-        safe_json_to_save = full_json_text
-        
-    current_row_count = len([line for line in lines_in_buffer if line.strip() and line.strip() not in ['[', ']', ',']])
-    
-    partial_csv_to_save, _, _ = sanitize_and_validate_csv(safe_json_to_save, meta_regulasi, meta_tipe, meta_tanggal)
+        line_status = f"Cut off mid-object (Deleted: '{candidate[:20]}...')"
+
+    current_row_count = len([l for l in lines_in_buffer if l.strip() and l.strip() not in ['[', ']', ',']])
+    partial_csv, _, _ = sanitize_and_validate_csv(safe_json_to_save, meta_regulasi, meta_tipe, meta_tanggal)
     with open(csv_path, "w", encoding="utf-8") as f:
-        f.write(partial_csv_to_save)
-        
+        f.write(partial_csv)
     return safe_json_to_save, line_status, current_row_count
 
 def build_continuation_history(user_string, full_json_text, error_nudge=False):
@@ -423,8 +422,8 @@ def extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe,
     ]
 
     max_loops = CONFIG["MAX_LOOPS"]
-    loop_count = 1 
-    abort_batch = False 
+    loop_count = 1
+    abort_batch = False
     full_json_text = "[\n"
     just_pruned_error = False
     malformed_retries = {}
@@ -432,43 +431,27 @@ def extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe,
     last_checked_line = 0
 
     print(f"  -> Firing main extraction request (Cycle {loop_count}/{max_loops})...")
-    
+
     while loop_count <= max_loops:
         response = call_openai_with_retry(client, CONFIG["MODEL_ID"], conversation_history)
-        
-        new_chunk = ""
-        for chunk in response:
-            if chunk.choices and len(chunk.choices) > 0:
-                delta = chunk.choices[0].delta.content or ""
-                new_chunk += delta
-                
+
+        new_chunk = "".join(
+            chunk.choices[0].delta.content or ""
+            for chunk in response
+            if chunk.choices and len(chunk.choices) > 0
+        )
         full_json_text += new_chunk
         append_to_log(f"--- CYCLE {loop_count} OUTPUT ---\n{new_chunk}\n")
 
         if is_document_ended(full_json_text):
             break
-            
-        full_json_text, line_status, current_row_count = handle_cycle_save(full_json_text, csv_path, meta_regulasi, meta_tipe, meta_tanggal)
 
-        bad_idx = find_first_malformed(full_json_text, start_from=last_checked_line)
-        if bad_idx != -1:
-            malformed_retries[bad_idx] = malformed_retries.get(bad_idx, 0) + 1
-            if malformed_retries[bad_idx] > max_prune_retries:
-                print(f"  [!] Malformed JSON at line ~{bad_idx} exceeded {max_prune_retries} retries. Accepting malformed rows.")
-                append_to_log(f"--- MALFORMED ROW EXCEEDED RETRIES (cycle {loop_count}) at data line index {bad_idx} ---\n")
-            else:
-                print(f"  [!] Pruned malformed JSON at line ~{bad_idx} (retry {malformed_retries[bad_idx]}/{max_prune_retries}). Regenerating from that point.")
-                append_to_log(f"--- MALFORMED ROW PRUNE (cycle {loop_count}, retry {malformed_retries[bad_idx]}) at data line index {bad_idx} ---\n")
-                full_json_text = '\n'.join(full_json_text.split('\n')[:bad_idx]) + '\n'
-                just_pruned_error = True
-                # Re-save CSV so on-disk partial matches the pruned in-memory buffer
-                partial_csv, _, _ = sanitize_and_validate_csv(full_json_text, meta_regulasi, meta_tipe, meta_tanggal)
-                with open(csv_path, "w", encoding="utf-8") as f:
-                    f.write(partial_csv)
-            # After pruning or accepting, the unchecked region is gone — reset scan to end
-            last_checked_line = len(full_json_text.split('\n'))
-        else:
-            last_checked_line = len(full_json_text.split('\n'))
+        full_json_text, line_status, current_row_count = handle_cycle_save(
+            full_json_text, csv_path, meta_regulasi, meta_tipe, meta_tanggal)
+
+        full_json_text, just_pruned_error, last_checked_line = prune_malformed_rows(
+            full_json_text, last_checked_line, malformed_retries, max_prune_retries,
+            csv_path, meta_regulasi, meta_tipe, meta_tanggal, loop_count)
 
         if not CONFIG["CONTINUOUS_EXECUTION"]:
             print(f"\n  [?] AI paused at object count: {current_row_count} ({line_status}). Partial saved.")
@@ -479,25 +462,49 @@ def extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe,
         else:
             print(f"  -> AI paused at object count: {current_row_count} ({line_status}). Auto-continuing...")
 
-        loop_count += 1 
+        loop_count += 1
         print(f"  -> Continuing generation... (Cycle {loop_count}/{max_loops})")
         conversation_history = build_continuation_history(user_string, full_json_text, error_nudge=just_pruned_error)
         just_pruned_error = False
 
-    if loop_count > max_loops: print("  [!] Safety limit reached: Max loops exceeded.")
+    if loop_count > max_loops:
+        print("  [!] Safety limit reached: Max loops exceeded.")
 
-    final_csv_to_save, final_row_count, malformed_errors = sanitize_and_validate_csv(full_json_text, meta_regulasi, meta_tipe, meta_tanggal)
-    with open(csv_path, "w", encoding="utf-8") as f: f.write(final_csv_to_save)
-        
+    final_csv_to_save, final_row_count, malformed_errors = sanitize_and_validate_csv(
+        full_json_text, meta_regulasi, meta_tipe, meta_tanggal)
+    with open(csv_path, "w", encoding="utf-8") as f:
+        f.write(final_csv_to_save)
+
     print(f"  [OK] Final stitched file compiled and saved to {csv_path}")
     print_summary(csv_path, malformed_errors)
-    
+
     deduped_count = deduplicate_csv(csv_path)
     if deduped_count != final_row_count:
-        removed = final_row_count - deduped_count
-        print(f"  [OK] Deduplicated {removed} duplicate row(s) from {csv_path}")
-    
+        print(f"  [OK] Deduplicated {final_row_count - deduped_count} duplicate row(s) from {csv_path}")
+
     return deduped_count, abort_batch, malformed_errors, loop_count
+
+
+def prune_malformed_rows(full_json_text, last_checked_line, malformed_retries,
+                         max_prune_retries, csv_path, meta_regulasi, meta_tipe,
+                         meta_tanggal, loop_count):
+    bad_idx = find_first_malformed(full_json_text, start_from=last_checked_line)
+    if bad_idx == -1:
+        return full_json_text, False, len(full_json_text.split('\n'))
+
+    malformed_retries[bad_idx] = malformed_retries.get(bad_idx, 0) + 1
+    if malformed_retries[bad_idx] > max_prune_retries:
+        print(f"  [!] Malformed JSON at line ~{bad_idx} exceeded {max_prune_retries} retries. Accepting malformed rows.")
+        append_to_log(f"--- MALFORMED ROW EXCEEDED RETRIES (cycle {loop_count}) at data line index {bad_idx} ---\n")
+        return full_json_text, False, len(full_json_text.split('\n'))
+
+    print(f"  [!] Pruned malformed JSON at line ~{bad_idx} (retry {malformed_retries[bad_idx]}/{max_prune_retries}). Regenerating from that point.")
+    append_to_log(f"--- MALFORMED ROW PRUNE (cycle {loop_count}, retry {malformed_retries[bad_idx]}) at data line index {bad_idx} ---\n")
+    full_json_text = '\n'.join(full_json_text.split('\n')[:bad_idx]) + '\n'
+    partial_csv, _, _ = sanitize_and_validate_csv(full_json_text, meta_regulasi, meta_tipe, meta_tanggal)
+    with open(csv_path, "w", encoding="utf-8") as f:
+        f.write(partial_csv)
+    return full_json_text, True, len(full_json_text.split('\n'))
 
 def process_single_file(md_path, csv_path, md_content=None):
     filename_base = os.path.basename(md_path)
@@ -518,42 +525,39 @@ def process_single_file(md_path, csv_path, md_content=None):
 # COMBINE CSVS
 # ==========================================
 def combine_csvs(csv_paths, output_path):
-    """Combine multiple CSVs into one. Keeps the header from the first file only."""
     if not csv_paths:
         return 0
-    
+
     total_rows = 0
     header_written = False
-    
+
     with open(output_path, "w", encoding="utf-8") as out:
         for csv_path in csv_paths:
             if not os.path.exists(csv_path):
                 continue
             with open(csv_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-            
             if not lines:
                 continue
-            
+
             data_start = 0
-            if header_written:
+            if not header_written:
+                if lines[0].startswith("Regulasi|"):
+                    out.write(lines[0])
+                    header_written = True
+                data_start = 1
+            else:
                 for i, line in enumerate(lines):
                     if not line.startswith("Regulasi|"):
                         data_start = i
                         break
                     data_start = i + 1
-            else:
-                if lines[0].startswith("Regulasi|"):
-                    out.write(lines[0])
-                    header_written = True
-                    data_start = 1
-            
+
             for line in lines[data_start:]:
-                stripped = line.strip()
-                if stripped:
+                if line.strip():
                     out.write(line)
                     total_rows += 1
-    
+
     return total_rows
 
 def deduplicate_csv(csv_path):
@@ -651,13 +655,138 @@ def get_file_choice(files, file_type):
     
     return result
 
+def convert_pdfs_to_markdown_batch(selected_files):
+    print(f"\n[PHASE 1] Multi-threaded PDF to Markdown...")
+    with ThreadPoolExecutor(max_workers=min(8, (os.cpu_count() or 1) + 4)) as executor:
+        futures = {}
+        for fp in selected_files:
+            b_name = os.path.splitext(os.path.basename(fp))[0]
+            md_path = os.path.join(CONFIG["WORK_DIR"], f"{b_name}.md")
+            choice = prompt_overwrite(md_path)
+            if choice == 'c':
+                break
+            if choice == 'y':
+                futures[executor.submit(convert_pdf_to_md, fp, md_path, quiet=True)] = b_name
+
+        for future in as_completed(futures):
+            try:
+                future.result()
+                print(f"  [OK] Converted: {futures[future]}.pdf")
+            except Exception as e:
+                print(f"  [ERROR] Failed to convert {futures[future]}.pdf: {e}")
+
+
+def extract_csvs_from_markdown_batch(selected_files, action):
+    print(f"\n[PHASE 2] Sequential LLM Extraction...")
+    api_start_time = time.time()
+    batch_results = []
+
+    for idx, file_path in enumerate(selected_files, start=1):
+        file_start_time = time.time()
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        md_path = os.path.join(CONFIG["WORK_DIR"], f"{base_name}.md")
+        csv_path = os.path.join(CONFIG["WORK_DIR"], f"{base_name}.csv")
+
+        eta_str = "Calculating..." if idx == 1 else format_time(
+            ((time.time() - api_start_time) / (idx - 1)) * (len(selected_files) - idx + 1))
+
+        print(f"\n--- [File {idx}/{len(selected_files)}] {base_name} | ETA: {eta_str} ---")
+
+        try:
+            csv_choice = prompt_overwrite(csv_path)
+            if csv_choice == 'c':
+                break
+            if csv_choice != 'y':
+                batch_results.append(dict(file=base_name, csv_path="", rows=0, cycles=0, status="Skipped", duration=0))
+                continue
+
+            rows_ext, abort_batch, errs, cycles = process_single_file(md_path, csv_path)
+            status = "Success" if not errs else f"Warn ({len(errs)} Bad)"
+            batch_results.append(dict(file=base_name, csv_path=csv_path, rows=rows_ext,
+                                       cycles=cycles, status=status, duration=time.time() - file_start_time))
+            if abort_batch:
+                break
+
+        except Exception as e:
+            append_to_log(f"--- CRITICAL ERROR ---\n{str(e)}\n")
+            print(f"\n  [CRITICAL ERROR] {str(e)}")
+            try:
+                if action == '3':
+                    shutil.move(file_path, os.path.join(CONFIG["FAILED_DIR"], os.path.basename(file_path)))
+                shutil.move(md_path, os.path.join(CONFIG["FAILED_DIR"], os.path.basename(md_path)))
+                print(f"  [QUARANTINED] Moved {base_name} to '{CONFIG['FAILED_DIR']}'")
+            except Exception as quarantine_err:
+                print(f"  [WARNING] Failed to quarantine files: {quarantine_err}")
+            batch_results.append(dict(file=base_name, csv_path="", rows=0, cycles=1, status="Failed",
+                                       duration=time.time() - file_start_time))
+
+    return batch_results
+
+
+def print_batch_report(batch_results, global_start_time):
+    if not batch_results:
+        return
+
+    TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
+    total_global_time = time.time() - global_start_time
+
+    print("\n\n" + "=" * 89)
+    print("                                 BATCH EXECUTION REPORT")
+    print("=" * 89)
+    print(f"{'File Name':<35} | {'Rows':<6} | {'Cycles':<6} | {'Duration':<9} | {'Status'}")
+    print("-" * 89)
+
+    total_rows = success_count = 0
+    for r in batch_results:
+        display_name = r['file'][:33] + '..' if len(r['file']) > 35 else r['file']
+        print(f"{display_name:<35} | {r['rows']:<6} | {r['cycles']:<6} | {format_time(r['duration']):<9} | {r['status']}")
+        total_rows += r['rows']
+        if "Success" in r['status'] or "Warn" in r['status']:
+            success_count += 1
+
+    print("-" * 89)
+    print(f"  Total Time: {format_time(total_global_time)} | Data Rows: {total_rows} | Success Rate: {success_count}/{len(batch_results)}")
+    print("=" * 89)
+
+    report_data = {
+        "timestamp": TIMESTAMP,
+        "total_time_sec": round(total_global_time, 2),
+        "total_rows": total_rows,
+        "success_count": success_count,
+        "total_files": len(batch_results),
+        "files": [dict(file=r["file"], rows=r["rows"], cycles=r["cycles"],
+                       duration_sec=round(r["duration"], 2), status=r["status"])
+                  for r in batch_results]
+    }
+    report_path = os.path.join(CONFIG["LOG_DIR"], f"report_{TIMESTAMP}.json")
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(report_data, f, indent=2, ensure_ascii=False)
+    print(f"\n  [REPORT] Saved to: {report_path}")
+
+    maybe_combine_csvs(batch_results, TIMESTAMP)
+
+
+def maybe_combine_csvs(batch_results, TIMESTAMP):
+    successful_csvs = [r["csv_path"] for r in batch_results
+                       if r.get("csv_path") and os.path.exists(r["csv_path"])]
+    if len(successful_csvs) <= 1:
+        return
+    choice = input("\n  Combine all generated CSVs into one file? (y/n): ").strip().lower()
+    if choice != 'y':
+        return
+    combined_name = f"combined_{TIMESTAMP}.csv"
+    combined_path = os.path.join(CONFIG["WORK_DIR"], combined_name)
+    combined_rows = combine_csvs(successful_csvs, combined_path)
+    print(f"  [OK] Combined {len(successful_csvs)} CSV(s) -> {combined_path} ({combined_rows} data rows)")
+
+
 def main():
     setup_environment()
     print("\n===Script Configs===")
     print(CONFIG)
     print("\n=== POJK Data Extraction Pipeline ===")
     print("1. Convert PDF to MD\n2. Convert MD to CSV (Via Line JSON Extraction)\n3. Convert PDF to CSV (End-to-End)\n4. Combine existing CSVs\n0. Exit")
-    
+
     action = input("\nSelect action: ").strip()
     if action == '0': sys.exit(0)
     if action not in ['1', '2', '3', '4']: sys.exit(0)
@@ -665,11 +794,8 @@ def main():
     file_type = "pdf" if action in ['1', '3'] else "md" if action == '2' else "csv"
     target_files = glob.glob(os.path.join(CONFIG["WORK_DIR"], f"*.{file_type}"))
     selected_files = get_file_choice(target_files, file_type)
-    
-    if not selected_files: sys.exit(0)
-    
-    batch_results = []
-    global_start_time = time.time()
+    if not selected_files:
+        sys.exit(0)
 
     if action == '4':
         TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -678,152 +804,16 @@ def main():
         print(f"\n  [OK] Combined {len(selected_files)} CSV(s) -> {combined_path} ({combined_rows} data rows)")
         sys.exit(0)
 
+    global_start_time = time.time()
+    batch_results = []
+
     if action in ['1', '3']:
-        print(f"\n[PHASE 1] Multi-threaded PDF to Markdown...")
-        with ThreadPoolExecutor(max_workers=min(8, (os.cpu_count() or 1) + 4)) as executor:
-            futures = {}
-            for fp in selected_files:
-                b_name = os.path.splitext(os.path.basename(fp))[0]
-                md_path = os.path.join(CONFIG["WORK_DIR"], f"{b_name}.md")
-                
-                choice = prompt_overwrite(md_path)
-                if choice == 'y': 
-                    futures[executor.submit(convert_pdf_to_md, fp, md_path, quiet=True)] = b_name
-                elif choice == 'c': 
-                    break
-            
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                    print(f"  [OK] Converted: {futures[future]}.pdf")
-                except Exception as e: 
-                    print(f"  [ERROR] Failed to convert {futures[future]}.pdf: {e}")
+        convert_pdfs_to_markdown_batch(selected_files)
 
     if action in ['2', '3']:
-        print(f"\n[PHASE 2] Sequential LLM Extraction...")
-        api_start_time = time.time()
-        
-        for idx, file_path in enumerate(selected_files, start=1):
-            file_start_time = time.time()
-            base_name = os.path.splitext(os.path.basename(file_path))[0]
-            md_path = os.path.join(CONFIG["WORK_DIR"], f"{base_name}.md")
-            csv_path = os.path.join(CONFIG["WORK_DIR"], f"{base_name}.csv")
+        batch_results = extract_csvs_from_markdown_batch(selected_files, action)
 
-            if idx > 1:
-                avg_time = (time.time() - api_start_time) / (idx - 1)
-                eta_str = format_time(avg_time * (len(selected_files) - idx + 1))
-            else:
-                eta_str = "Calculating..."
-                
-            print(f"\n--- [File {idx}/{len(selected_files)}] {base_name} | ETA: {eta_str} ---")
-            
-            try:
-                csv_choice = prompt_overwrite(csv_path)
-                if csv_choice == 'c': 
-                    break
-                elif csv_choice == 'y':
-                    rows_ext, abort_batch, errs, cycles = process_single_file(md_path, csv_path)
-                    
-                    status = "Success" if not errs else f"Warn ({len(errs)} Bad)"
-                    
-                    batch_results.append({
-                        "file": base_name,
-                        "csv_path": csv_path,
-                        "rows": rows_ext,
-                        "cycles": cycles,
-                        "status": status,
-                        "duration": time.time() - file_start_time
-                    })
-                    
-                    if abort_batch: 
-                        break
-                else:
-                    batch_results.append({
-                        "file": base_name,
-                        "csv_path": "",
-                        "rows": 0,
-                        "cycles": 0,
-                        "status": "Skipped",
-                        "duration": 0
-                    })
-                    
-            except Exception as e:
-                append_to_log(f"--- CRITICAL ERROR ---\n{str(e)}\n")
-                print(f"\n  [CRITICAL ERROR] {str(e)}")
-                
-                try:
-                    if action == '3': 
-                        shutil.move(file_path, os.path.join(CONFIG["FAILED_DIR"], os.path.basename(file_path)))
-                    shutil.move(md_path, os.path.join(CONFIG["FAILED_DIR"], os.path.basename(md_path)))
-                    print(f"  [QUARANTINED] Moved {base_name} to '{CONFIG['FAILED_DIR']}'")
-                except Exception as quarantine_err: 
-                    print(f"  [WARNING] Failed to quarantine files: {quarantine_err}")
-                    
-                batch_results.append({
-                    "file": base_name,
-                    "csv_path": "",
-                    "rows": 0,
-                    "cycles": 1,
-                    "status": "Failed",
-                    "duration": time.time() - file_start_time
-                })
-
-    if batch_results:
-        total_global_time = time.time() - global_start_time
-        print("\n\n" + "="*89)
-        print("                                 BATCH EXECUTION REPORT")
-        print("="*89)
-        print(f"{'File Name':<35} | {'Rows':<6} | {'Cycles':<6} | {'Duration':<9} | {'Status'}")
-        print("-"*89)
-        
-        total_rows = success_count = 0
-        for r in batch_results:
-            display_name = r['file'][:33]+'..' if len(r['file'])>35 else r['file']
-            print(f"{display_name:<35} | {r['rows']:<6} | {r['cycles']:<6} | {format_time(r['duration']):<9} | {r['status']}")
-            total_rows += r['rows']
-            if "Success" in r['status'] or "Warn" in r['status']: 
-                success_count += 1
-                
-        print("-" * 89)
-        print(f"  Total Time: {format_time(total_global_time)} | Data Rows: {total_rows} | Success Rate: {success_count}/{len(batch_results)}")
-        print("="*89)
-        
-        # Persist batch report as JSON
-        TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
-        report_data = {
-            "timestamp": TIMESTAMP,
-            "total_time_sec": round(total_global_time, 2),
-            "total_rows": total_rows,
-            "success_count": success_count,
-            "total_files": len(batch_results),
-            "files": [
-                {
-                    "file": r["file"],
-                    "rows": r["rows"],
-                    "cycles": r["cycles"],
-                    "duration_sec": round(r["duration"], 2),
-                    "status": r["status"]
-                }
-                for r in batch_results
-            ]
-        }
-        report_path = os.path.join(CONFIG["LOG_DIR"], f"report_{TIMESTAMP}.json")
-        with open(report_path, "w", encoding="utf-8") as f:
-            json.dump(report_data, f, indent=2, ensure_ascii=False)
-        print(f"\n  [REPORT] Saved to: {report_path}")
-        
-        # Ask to combine successful CSVs
-        successful_csvs = [
-            r["csv_path"] for r in batch_results
-            if r.get("csv_path") and os.path.exists(r["csv_path"])
-        ]
-        if len(successful_csvs) > 1:
-            choice = input("\n  Combine all generated CSVs into one file? (y/n): ").strip().lower()
-            if choice == 'y':
-                combined_name = f"combined_{TIMESTAMP}.csv"
-                combined_path = os.path.join(CONFIG["WORK_DIR"], combined_name)
-                combined_rows = combine_csvs(successful_csvs, combined_path)
-                print(f"  [OK] Combined {len(successful_csvs)} CSV(s) -> {combined_path} ({combined_rows} data rows)")
+    print_batch_report(batch_results, global_start_time)
 
 if __name__ == "__main__":
     main()
