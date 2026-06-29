@@ -1,0 +1,30 @@
+{
+  "timestamp": "20260629_104139",
+  "total_time_sec": 1369.98,
+  "total_rows": 723,
+  "success_count": 3,
+  "total_files": 3,
+  "files": [
+    {
+      "file": "POJK 1 Tahun 2024 Kualitas Aset Bank Perekonomian Rakyat",
+      "rows": 253,
+      "cycles": 8,
+      "duration_sec": 613.9,
+      "status": "Success"
+    },
+    {
+      "file": "pojk-2024-12-penerapan-strategi-anti-fraud-bagi-lembaga-jasa-keuangan",
+      "rows": 131,
+      "cycles": 5,
+      "duration_sec": 397.52,
+      "status": "Success"
+    },
+    {
+      "file": "pojk-2024-26-perluasan-kegiatan-usaha-perbankan",
+      "rows": 339,
+      "cycles": 5,
+      "duration_sec": 358.56,
+      "status": "Success"
+    }
+  ]
+}

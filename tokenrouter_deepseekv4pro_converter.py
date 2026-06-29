@@ -77,9 +77,9 @@ To minimize token usage, you must use minified keys. Output exactly ONE valid JS
 **MINIFIED JSON SCHEMA (7 KEYS):**
 Each line must be a single flat object with these exact keys:
 * `sec`: Bagian (Section) -> Evaluate the semantic intent of the article dynamically. See STRICT CATEGORIZATION RULES.
-* `ref_item`: Item Ref -> The parent reference (e.g., "Pasal 2" or "Pasal 2 ayat 1"). NEVER include "huruf" or "angka" tags here.
+* `ref_item`: Item Ref -> The parent reference. If the article contains numbered paragraphs (Ayat), you MUST include the Ayat number here (e.g., "Pasal 2 ayat 1"). ONLY use "Pasal 2" if the article has no numbered paragraphs. NEVER include "huruf" or "angka" tags here.
 * `item`: Item -> Main text of the Item. Strip numbering prefixes.
-* `desc`: Item Description -> Explanation strictly from the "PENJELASAN" section. See ANTI-LAZINESS RULE.
+* `desc`: Item Description -> Explanation scoped strictly to this specific Item Ref (Pasal or Ayat) from the "PENJELASAN" section. See PENJELASAN SCOPING RULE and ANTI-LAZINESS RULE.
 * `k_sub`: Kode Sub Item -> Incremental integer (1, 2, 3...) for sub-items under this parent. Use null if none.
 * `ref_sub`: Sub Item Ref -> Letter or number of the list item (e.g., "a", "b", "1"). Use "" if none.
 * `sub`: Sub Item -> Actual text of the sub-item. Strip its prefix. See 3-LEVEL NESTING RULE.
@@ -96,11 +96,24 @@ Your output schema ONLY supports 2 levels (Item and Sub-item). If the document g
 * Concatenate the 3rd-level list directly into the `sub` string. 
 * Example for Pasal 46 ayat 3 huruf a: `ref_item` is "Pasal 46 ayat 3", `ref_sub` is "a", and `sub` is "penerapan prinsip kehati-hatian berupa: 1. penilaian... 2. pemenuhan... 3. batas..."
 
-**ANTI-LAZINESS RULE FOR "PENJELASAN" (CRITICAL):**
-You must extract the ENTIRE verbatim text from the Penjelasan for the `desc` field, even if it is very long or contains lists. YOU MUST ONLY output "Cukup jelas." if the original document literally only contains those two words for that specific article. Do not use "Cukup jelas" as a lazy placeholder.
+**PENJELASAN SCOPING RULE (CRITICAL):**
+The `desc` field must contain ONLY the explanation for the specific Item (Pasal or Ayat) being extracted. The Penjelasan section explains each part separately — you must match them one-to-one.
+* Find the explanation for the exact Pasal or Ayat in the Penjelasan section and use only that text.
+* NEVER concatenate explanations from multiple Ayat into one `desc` field.
+* Strip the Ayat header label (e.g., "Ayat (1)") from the start of the extracted text — output only the explanation body.
+* If multiple rows share the same `ref_item` (e.g., huruf a, b, c under the same Ayat), repeat the same scoped `desc` on each row.
 
-BAD EXAMPLE (Lazy):
-{"desc": "Cukup jelas."} // When the document actually has a paragraph of explanation.
+BAD EXAMPLE (dumps entire Pasal Penjelasan into one Ayat):
+{"ref_item": "Pasal 6 ayat 1", "desc": "Ayat (1) Modal disetor bagi BPR... Ayat (2) Modal disetor bagi BPR Syariah... Ayat (6) Cukup jelas."}
+
+GOOD EXAMPLE (scoped to the correct Ayat, header stripped):
+{"ref_item": "Pasal 6 ayat 1", "desc": "Modal disetor bagi BPR berbentuk badan hukum Koperasi yaitu simpanan pokok dan simpanan wajib sesuai dengan Undang-Undang mengenai perkoperasian."}
+
+**ANTI-LAZINESS RULE FOR "PENJELASAN" (CRITICAL):**
+You must extract the ENTIRE verbatim text of the matching Penjelasan for the `desc` field, even if it is very long or contains lists. ONLY output "Cukup jelas." if the Penjelasan for that specific Pasal/Ayat literally contains only those two words.
+
+BAD EXAMPLE (lazy):
+{"desc": "Cukup jelas."} // When the Penjelasan for that Ayat actually has a paragraph of explanation.
 
 GOOD EXAMPLE:
 {"desc": "Yang dimaksud dengan 'kualitas aset' adalah penilaian terhadap kondisi keuangan debitur dan prospek usaha..."}
