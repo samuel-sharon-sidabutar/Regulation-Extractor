@@ -656,13 +656,13 @@ def main():
     print("\n===Script Configs===")
     print(CONFIG)
     print("\n=== POJK Data Extraction Pipeline ===")
-    print("1. Convert PDF to MD\n2. Convert MD to CSV (Via Line JSON Extraction)\n3. Convert PDF to CSV (End-to-End)\n0. Exit")
+    print("1. Convert PDF to MD\n2. Convert MD to CSV (Via Line JSON Extraction)\n3. Convert PDF to CSV (End-to-End)\n4. Combine existing CSVs\n0. Exit")
     
     action = input("\nSelect action: ").strip()
     if action == '0': sys.exit(0)
-    if action not in ['1', '2', '3']: sys.exit(0)
+    if action not in ['1', '2', '3', '4']: sys.exit(0)
 
-    file_type = "pdf" if action in ['1', '3'] else "md"
+    file_type = "pdf" if action in ['1', '3'] else "md" if action == '2' else "csv"
     target_files = glob.glob(os.path.join(CONFIG["WORK_DIR"], f"*.{file_type}"))
     selected_files = get_file_choice(target_files, file_type)
     
@@ -670,6 +670,13 @@ def main():
     
     batch_results = []
     global_start_time = time.time()
+
+    if action == '4':
+        TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
+        combined_path = os.path.join(CONFIG["WORK_DIR"], f"combined_{TIMESTAMP}.csv")
+        combined_rows = combine_csvs(selected_files, combined_path)
+        print(f"\n  [OK] Combined {len(selected_files)} CSV(s) -> {combined_path} ({combined_rows} data rows)")
+        sys.exit(0)
 
     if action in ['1', '3']:
         print(f"\n[PHASE 1] Multi-threaded PDF to Markdown...")
@@ -810,7 +817,7 @@ def main():
             r["csv_path"] for r in batch_results
             if r.get("csv_path") and os.path.exists(r["csv_path"])
         ]
-        if successful_csvs:
+        if len(successful_csvs) > 1:
             choice = input("\n  Combine all generated CSVs into one file? (y/n): ").strip().lower()
             if choice == 'y':
                 combined_name = f"combined_{TIMESTAMP}.csv"
