@@ -14,7 +14,7 @@ from openai import OpenAI
 # CONFIGURATION & CENTRALIZED SETTINGS
 # ==========================================
 CONFIG = {
-    "MODEL": "minimax",  # Switch to "minimax" to change model — one word only
+    "MODEL": "deepseek",  # Switch to "minimax" to change model — one word only
     "WORK_DIR": "regulations",
     "FAILED_DIR": os.path.join("regulations", "failed_files"),
     "CONTINUOUS_EXECUTION": True,
@@ -277,6 +277,21 @@ def _is_complete_json_object(line):
     except (json.JSONDecodeError, ValueError):
         return False
 
+def find_first_malformed(json_stream, start_from=0):
+    """Return the index of the first line that isn't valid JSON, or -1.
+    start_from skips already-validated lines for efficiency."""
+    lines = json_stream.split('\n')
+    for i in range(start_from, len(lines)):
+        line = lines[i]
+        cleaned = line.strip().rstrip(',')
+        if not cleaned or cleaned in ['[', ']'] or is_document_ended(cleaned):
+            continue
+        try:
+            json.loads(cleaned)
+        except (json.JSONDecodeError, ValueError):
+            return i
+    return -1
+
 def handle_cycle_save(full_json_text, csv_path, meta_regulasi, meta_tipe, meta_tanggal):
     """Handles the mid-cycle popping of cut-off JSON fragments and partial saves.
     
@@ -314,16 +329,20 @@ def handle_cycle_save(full_json_text, csv_path, meta_regulasi, meta_tipe, meta_t
         
     return safe_json_to_save, line_status, current_row_count
 
-def build_continuation_history(user_string, full_json_text):
+def build_continuation_history(user_string, full_json_text, error_nudge=False):
     """Builds the continuation prompt using an expanded 120-line context window."""
     raw_lines = full_json_text.split('\n')
-    last_context = '\n'.join(raw_lines[-120:]) 
+    last_context = '\n'.join(raw_lines[-120:])
+
+    resume_msg = "Resume generating the JSON array exactly where you left off. Output ONLY raw minified JSON objects, one per line. Do not wrap in new brackets or rewrite previous records."
+    if error_nudge:
+        resume_msg += " CRITICAL: Your previous generation contained invalid/malformed JSON. Ensure all quotes are escaped properly and output strictly valid JSON."
 
     return [
         {"role": "system", "content": MASTER_PROMPT},
         {"role": "user", "content": user_string},
         {"role": "assistant", "content": last_context},
-        {"role": "user", "content": "Resume generating the JSON array exactly where you left off. Output ONLY raw minified JSON objects, one per line. Do not wrap in new brackets or rewrite previous records."}
+        {"role": "user", "content": resume_msg}
     ]
 
 # ==========================================
@@ -394,7 +413,11 @@ def extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe,
     loop_count = 1 
     abort_batch = False 
     full_json_text = "[\n"
-    
+    just_pruned_error = False
+    malformed_retries = {}
+    max_prune_retries = CONFIG["API_RETRY_MAX"]
+    last_checked_line = 0
+
     print(f"  -> Firing main extraction request (Cycle {loop_count}/{max_loops})...")
     
     while loop_count <= max_loops:
@@ -413,7 +436,27 @@ def extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe,
             break
             
         full_json_text, line_status, current_row_count = handle_cycle_save(full_json_text, csv_path, meta_regulasi, meta_tipe, meta_tanggal)
-            
+
+        bad_idx = find_first_malformed(full_json_text, start_from=last_checked_line)
+        if bad_idx != -1:
+            malformed_retries[bad_idx] = malformed_retries.get(bad_idx, 0) + 1
+            if malformed_retries[bad_idx] > max_prune_retries:
+                print(f"  [!] Malformed JSON at line ~{bad_idx} exceeded {max_prune_retries} retries. Accepting malformed rows.")
+                append_to_log(f"--- MALFORMED ROW EXCEEDED RETRIES (cycle {loop_count}) at data line index {bad_idx} ---\n")
+            else:
+                print(f"  [!] Pruned malformed JSON at line ~{bad_idx} (retry {malformed_retries[bad_idx]}/{max_prune_retries}). Regenerating from that point.")
+                append_to_log(f"--- MALFORMED ROW PRUNE (cycle {loop_count}, retry {malformed_retries[bad_idx]}) at data line index {bad_idx} ---\n")
+                full_json_text = '\n'.join(full_json_text.split('\n')[:bad_idx]) + '\n'
+                just_pruned_error = True
+                # Re-save CSV so on-disk partial matches the pruned in-memory buffer
+                partial_csv, _, _ = sanitize_and_validate_csv(full_json_text, meta_regulasi, meta_tipe, meta_tanggal)
+                with open(csv_path, "w", encoding="utf-8") as f:
+                    f.write(partial_csv)
+            # After pruning or accepting, the unchecked region is gone — reset scan to end
+            last_checked_line = len(full_json_text.split('\n'))
+        else:
+            last_checked_line = len(full_json_text.split('\n'))
+
         if not CONFIG["CONTINUOUS_EXECUTION"]:
             print(f"\n  [?] AI paused at object count: {current_row_count} ({line_status}). Partial saved.")
             if input("      Continue processing THIS file? (y/n): ").strip().lower() != 'y':
@@ -425,7 +468,8 @@ def extract_main_content(client, md_content, csv_path, meta_regulasi, meta_tipe,
 
         loop_count += 1 
         print(f"  -> Continuing generation... (Cycle {loop_count}/{max_loops})")
-        conversation_history = build_continuation_history(user_string, full_json_text)
+        conversation_history = build_continuation_history(user_string, full_json_text, error_nudge=just_pruned_error)
+        just_pruned_error = False
 
     if loop_count > max_loops: print("  [!] Safety limit reached: Max loops exceeded.")
 
