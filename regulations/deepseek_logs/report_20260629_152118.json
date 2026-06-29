@@ -1,0 +1,16 @@
+{
+  "timestamp": "20260629_152118",
+  "total_time_sec": 429.57,
+  "total_rows": 347,
+  "success_count": 1,
+  "total_files": 1,
+  "files": [
+    {
+      "file": "pojk-2024-26-perluasan-kegiatan-usaha-perbankan",
+      "rows": 347,
+      "cycles": 5,
+      "duration_sec": 429.57,
+      "status": "Success"
+    }
+  ]
+}
