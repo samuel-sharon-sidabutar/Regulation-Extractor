@@ -1,0 +1,8 @@
+__pycache__/
+.commandcode/
+regulations/**/*.csv
+regulations/failed_files/
+regulations/*_logs/
+regulations/*-best/
+regulations/pre-refactor/
+regulations/pruned_files/

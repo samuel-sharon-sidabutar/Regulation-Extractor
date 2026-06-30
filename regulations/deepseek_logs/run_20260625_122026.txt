@@ -1,7 +1,0 @@
-
-
-================================================================================
-=== START AI LOG | File: POJK 1 Tahun 2024 Kualitas Aset Bank Perekonomian Rakyat.md | Time: 2026-06-25 12:20:37 ===
-================================================================================
---- CRITICAL ERROR ---
-Error code: 400 - {'error': {'message': 'You have insufficient credits to make this request. Please purchase more credits to continue using the service.', 'type': 'invalid_request_error', 'code': 'BAD_REQUEST'}}
