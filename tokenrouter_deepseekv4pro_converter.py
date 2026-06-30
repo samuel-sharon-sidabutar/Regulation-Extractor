@@ -10,11 +10,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from markitdown import MarkItDown
 from openai import OpenAI
 
-# ==========================================
-# CONFIGURATION & CENTRALIZED SETTINGS
-# ==========================================
 CONFIG = {
-    "MODEL": "deepseek",  # Switch to "minimax" to change model — one word only
+    "MODEL": "deepseek",  # Switch to "minimax" to change model
     "WORK_DIR": "regulations",
     "FAILED_DIR": os.path.join("regulations", "failed_files"),
     "CONTINUOUS_EXECUTION": True,
@@ -24,13 +21,12 @@ CONFIG = {
     "API_RETRY_MAX": 4,
     "API_RETRY_BASE_DELAY_SEC": 30,
     "MAX_LOOPS": 30,
-    # Below are filled by resolve_model_config() at startup:
     "LOG_DIR": "",
     "MODEL_ID": ""
 }
 
 MODEL_PRESETS = {
-    "deepseek": {
+    "deepseek": { # The model this script was optimized on
         "LOG_DIR": os.path.join("regulations", "deepseek_logs"),
         "MODEL_ID": "deepseek/deepseek-v4-pro",
         "TEMPERATURE": 0.1,
@@ -54,9 +50,10 @@ def resolve_model_config():
 MalformedRow = namedtuple("MalformedRow", ["row_num", "raw_fragment"])
 DocumentMetadata = namedtuple("DocumentMetadata", ["regulasi", "tipe", "tanggal"])
 
-# ==========================================
+class APIQuotaExhaustedError(Exception):
+    """Raised when the API retry loop exhausts all attempts due to quota/credit limits."""
+
 # PROMPTS
-# ==========================================
 METADATA_PROMPT = """Act as an expert data extractor. Look at the provided Indonesian banking regulation (POJK).
 Extract EXACTLY ONE line of text containing these 3 values separated by pipes (|). Do not include a header row.
 
@@ -375,7 +372,7 @@ def call_openai_with_retry(client, model_id, conversation_history):
             error_msg = str(e)
             if "403" in error_msg or "credit limit" in error_msg.lower():
                 if attempt >= max_attempts:
-                    raise Exception(f"Max attempts ({max_attempts}) exceeded for API limit.")
+                    raise APIQuotaExhaustedError(f"Max attempts ({max_attempts}) exceeded for API limit.")
                 
                 delay = base_delay * (2 ** (attempt - 1))
                 print(f"\n  [!] API Quota Limit Hit (403). Pausing for {delay}s (exponential backoff)... (Attempt {attempt}/{max_attempts})")
@@ -699,6 +696,13 @@ def extract_csvs_from_markdown_batch(selected_files, log_file, move_pdf_on_failu
             if abort_batch:
                 break
 
+        except APIQuotaExhaustedError:
+            append_to_log(log_file, "--- API QUOTA EXHAUSTED ---\n")
+            print(f"\n  [FATAL] API quota exhausted. Stopping batch.")
+            batch_results.append({"file": base_name, "csv_path": "", "rows": 0, "cycles": 1, "status": "Failed (Quota)",
+                                   "duration": time.time() - file_start_time})
+            break
+
         except Exception as e:
             append_to_log(log_file, f"--- CRITICAL ERROR ---\n{str(e)}\n")
             print(f"\n  [CRITICAL ERROR] {str(e)}")
@@ -715,7 +719,7 @@ def extract_csvs_from_markdown_batch(selected_files, log_file, move_pdf_on_failu
     return batch_results
 
 
-def print_batch_report(batch_results, global_start_time):
+def print_batch_report(batch_results, global_start_time, total_selected=0):
     if not batch_results:
         return None
 
@@ -737,7 +741,10 @@ def print_batch_report(batch_results, global_start_time):
             success_count += 1
 
     print("-" * 89)
-    print(f"  Total Time: {format_time(total_global_time)} | Data Rows: {total_rows} | Success Rate: {success_count}/{len(batch_results)}")
+    attempted = len(batch_results)
+    if total_selected and attempted < total_selected:
+        print(f"  Files Attempted: {attempted}/{total_selected} (batch stopped early)")
+    print(f"  Total Time: {format_time(total_global_time)} | Data Rows: {total_rows} | Success Rate: {success_count}/{attempted}")
     print("=" * 89)
 
     report_data = {
@@ -746,6 +753,7 @@ def print_batch_report(batch_results, global_start_time):
         "total_rows": total_rows,
         "success_count": success_count,
         "total_files": len(batch_results),
+        "total_selected": total_selected,
         "files": [{"file": result["file"], "rows": result["rows"], "cycles": result["cycles"],
                    "duration_sec": round(result["duration"], 2), "status": result["status"]}
                   for result in batch_results]
@@ -766,15 +774,14 @@ def main():
     print("1. Convert PDF to MD\n2. Convert MD to CSV (Via Line JSON Extraction)\n3. Convert PDF to CSV (End-to-End)\n4. Combine existing CSVs\n0. Exit")
 
     action = input("\nSelect action: ").strip()
-    if action == '0': sys.exit(0)
     if action not in ['1', '2', '3', '4']: sys.exit(0)
-
     if action in ['1', '3']:
         file_type = "pdf"
     elif action == '2':
         file_type = "md"
     else:
         file_type = "csv"
+
     target_files = glob.glob(os.path.join(CONFIG["WORK_DIR"], f"*.{file_type}"))
     selected_files = get_file_choice(target_files, file_type)
     if not selected_files:
@@ -795,18 +802,28 @@ def main():
 
     if action in ['2', '3']:
         batch_results = extract_csvs_from_markdown_batch(selected_files, log_file, move_pdf_on_failure=(action == '3'))
+    timestamp = print_batch_report(batch_results, global_start_time, total_selected=len(selected_files))
 
-    timestamp = print_batch_report(batch_results, global_start_time)
-    if timestamp is not None:
-        successful_csvs = [result["csv_path"] for result in batch_results
-                           if result.get("csv_path") and os.path.exists(result["csv_path"])]
-        if len(successful_csvs) > 1:
-            choice = input("\n  Combine all generated CSVs into one file? (y/n): ").strip().lower()
-            if choice == 'y':
-                combined_name = f"combined_{timestamp}.csv"
-                combined_path = os.path.join(CONFIG["WORK_DIR"], combined_name)
-                combined_rows = combine_csvs(successful_csvs, combined_path)
-                print(f"  [OK] Combined {len(successful_csvs)} CSV(s) -> {combined_path} ({combined_rows} data rows)")
+    if timestamp is None:
+        return
+
+    successful_csvs = []
+    for result in batch_results:
+        if result.get("csv_path") and os.path.exists(result["csv_path"]):
+            successful_csvs.append(result["csv_path"])
+
+    if len(successful_csvs) <= 1:
+        return
+
+    choice = input("\n  Combine all generated CSVs into one file? (y/n): ").strip().lower()
+
+    if choice != 'y':
+        return
+
+    combined_name = f"combined_{timestamp}.csv"
+    combined_path = os.path.join(CONFIG["WORK_DIR"], combined_name)
+    combined_rows = combine_csvs(successful_csvs, combined_path)
+    print(f"  [OK] Combined {len(successful_csvs)} CSV(s) -> {combined_path} ({combined_rows} data rows)")
 
 if __name__ == "__main__":
     main()

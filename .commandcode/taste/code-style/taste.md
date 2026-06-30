@@ -9,3 +9,4 @@
 - When a function takes many parameters (e.g., 7+), group related state into a small dict or dataclass rather than passing naked individual arguments. Confidence: 0.70
 - Use full descriptive variable names instead of abbreviations (e.g., file_path instead of fp, base_name instead of b_name, result instead of r). Confidence: 0.70
 - Prefer returning values from initialization/setup functions over mutating module-level globals. Confidence: 0.65
+- Avoid complex list comprehensions — expand them into explicit for loops when they involve conditionals, method calls, or multiple operations. Confidence: 0.70
